@@ -1,0 +1,24 @@
+{
+  "name": "p2p-comm",
+  "version": "1.0.0",
+  "description": "p2p-comm",
+  "main": "index.js",
+  "directories": {
+    "test": "test"
+  },
+  "scripts": {
+    "dev": "DEBUG=p2p-comm* npx ts-node-dev src/index.ts",
+    "tsc": "npx tsc",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "typescript": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^10.10.1",
+    "ts-node-dev": "^1.0.0-pre.30",
+    "tslint": "^5.11.0"
+  }
+}
