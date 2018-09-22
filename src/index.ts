@@ -1,12 +1,12 @@
 import { Pool } from './core/pool';
-
 import { randomBytes } from 'crypto';
+import { TCPTransport, TCPServer } from './transport/tcp';
 
 const seed = process.argv.slice(2).map(e => parseInt(e));
 
 console.log({ seed });
 
-const pool = new Pool({ seed });
+const pool = new Pool({ seed }, TCPTransport.connect, TCPServer.create);
 
 pool.listen(parseInt(process.env.PORT) || undefined);
 

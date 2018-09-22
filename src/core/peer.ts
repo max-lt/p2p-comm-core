@@ -1,6 +1,4 @@
 import { EventEmitter } from 'events';
-import { Socket } from 'net';
-import * as net from 'net';
 import { format } from 'util';
 import * as assert from 'assert';
 
@@ -8,8 +6,9 @@ import { SimpleLogger, Logger } from './logger';
 import { Timer } from './timer';
 import { BufferParser } from './parser/parser';
 import { HandshakePacket, types as PACKET, DataPacket, Packet } from './parser/packets';
+import { AbstractTransport } from '../transport/transport';
 
-export interface Peer {
+export interface Peer<T> {
   port: number;
 
   outbound: boolean;
@@ -42,13 +41,13 @@ export interface Peer {
 }
 
 
-export class SPeer extends EventEmitter implements Peer {
+export class SimplePeer<T extends AbstractTransport> extends EventEmitter implements Peer<T> {
 
   // debug
   private static counter = 0;
 
   logger: Logger;
-  socket: Socket;
+  tranbsport: T;
   parser: BufferParser;
 
   outbound = false;
@@ -67,37 +66,37 @@ export class SPeer extends EventEmitter implements Peer {
   connectTimeout: Timer;
   handshakeTimeout: Timer;
 
-  constructor({ port, filter, handshake = true }) {
+  constructor({ port, filter, handshake = true }, private TransportFactory: (port: number) => T) {
     super();
     this.port = port;
     this.handshake = handshake;
     this.connectTimeout = new Timer(2000);
     this.handshakeTimeout = new Timer(2000);
-    this.logger = new SimpleLogger('peer:' + SPeer.counter++);
+    this.logger = new SimpleLogger('peer:' + SimplePeer.counter++);
     this.filter = filter;
     this.parser = new BufferParser();
     this.init();
   }
 
-  static fromInbound(options, socket) {
-    const peer = new this(options);
-    peer.accept(socket);
+  static fromInbound(options, transport, Transport) {
+    const peer = new this(options, Transport);
+    peer.accept(transport);
     return peer;
   }
 
-  static fromOutbound(options, publicPort) {
-    const peer = new this(options);
+  static fromOutbound(options, publicPort, Transport) {
+    const peer = new this(options, Transport);
     peer.connect(options.port, publicPort);
     return peer;
   }
 
   /**
-   * Accept an inbound socket.
+   * Accept an inbound transport.
    */
-  private accept(socket: Socket) {
+  private accept(transport: T) {
     this.connected = true;
     this.outbound = false;
-    this.bind(socket);
+    this.bind(transport);
 
     if (this.handshake) {
       this.handshakeTimeout.start(() => {
@@ -108,18 +107,18 @@ export class SPeer extends EventEmitter implements Peer {
   }
 
   /**
-   * Create an outbound socket.
+   * Create an outbound transport.
    */
   private async connect(port: number, publicPort): Promise<void> {
-    const socket = net.connect(port);
+    const transport = this.TransportFactory(port);
     this.logger.debug('Connecting to', port);
     this.outbound = true;
     this.connected = false;
 
     const error = await new Promise<Error | null>((resolve) => {
       this.connectTimeout.start(() => resolve(new Error('timeout')));
-      socket.once('connect', () => resolve(null));
-      socket.once('error', (err) => resolve(err));
+      transport.once('connect', () => resolve(null));
+      transport.once('error', (err) => resolve(err));
     });
 
     this.connectTimeout.clear();
@@ -132,7 +131,7 @@ export class SPeer extends EventEmitter implements Peer {
     }
 
     this.connected = true;
-    this.bind(socket);
+    this.bind(transport);
     this.logger.log('Peer connect', this.connected, error);
     this.emit('connect');
 
@@ -157,22 +156,22 @@ export class SPeer extends EventEmitter implements Peer {
 
   }
 
-  private bind(socket: Socket) {
-    assert(!this.socket, 'already bound');
-    this.socket = socket;
+  private bind(transport: T) {
+    assert(!this.tranbsport, 'already bound');
+    this.tranbsport = transport;
 
-    this.socket.on('error', (err: Error) => {
+    this.tranbsport.on('error', (err: Error) => {
       this.logger.error('Peer error', err);
       this.error(err);
       this.destroy();
     });
 
-    this.socket.on('data', (data: Buffer) => {
+    this.tranbsport.on('data', (data: Buffer) => {
       this.feedParser(data);
     });
 
-    this.socket.once('close', () => {
-      console.log('socket close');
+    this.tranbsport.once('close', () => {
+      console.log('transport close');
       this.destroy();
     });
   }
@@ -231,7 +230,7 @@ export class SPeer extends EventEmitter implements Peer {
     this.emit('close', this.connected);
 
     if (this.connected) {
-      this.socket.destroy();
+      this.tranbsport.destroy();
     }
 
     this.destroyed = true;
@@ -239,7 +238,7 @@ export class SPeer extends EventEmitter implements Peer {
   }
 
   write(data: Buffer) {
-    this.socket.write(data);
+    this.tranbsport.write(data);
   }
 
   send(packet: Packet) {

@@ -1,9 +1,10 @@
 import { EventEmitter } from 'events';
 import { Pool } from './pool';
+import { TCPTransport } from '../transport/tcp';
 
 export class Node extends EventEmitter {
 
-  private pool: Pool;
+  private pool: Pool<TCPTransport>;
 
   constructor() {
     super();

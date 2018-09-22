@@ -1,23 +1,28 @@
 import { EventEmitter } from 'events';
-import { createServer, Server, Socket, AddressInfo } from 'net';
-import { SPeer, Peer } from './peer';
+import { SimplePeer, Peer } from './peer';
 import { Logger, SimpleLogger } from './logger';
 import { types as PACKET, DataPacket, Packet } from './parser/packets/';
 
-export class Pool extends EventEmitter {
+import { AbstractServer, AbstractTransport } from '../transport/transport';
+
+export class Pool<T extends AbstractTransport> extends EventEmitter {
 
   // Defines either handshake is mandatory or not
   handshake: boolean;
 
-  peers: PeerSet;
+  peers: PeerSet<T>;
   logger: Logger;
-  server: Server;
+  server: AbstractServer<T>;
 
   port: number;
   seeds: number[];
   filter: Set<string>;
 
-  constructor(opts?: { seed: number[] }) {
+  constructor(
+    opts: { seed: number[] },
+    private TransportFactory: (port: number) => T,
+    private ServerFactory: () => AbstractServer<T>
+  ) {
     super();
 
     this.port = 0;
@@ -25,7 +30,7 @@ export class Pool extends EventEmitter {
     this.filter = new Set();
     this.peers = new PeerSet;
     this.logger = new SimpleLogger('pool');
-    this.server = createServer();
+    this.server = this.ServerFactory();
     this.seeds = opts && opts.seed || [];
 
     this.logger.info('Created pool');
@@ -37,9 +42,9 @@ export class Pool extends EventEmitter {
       this.emit('error', err);
     });
 
-    this.server.on('connection', (socket) => {
-      this.addInbound(socket);
-      this.emit('connection', socket);
+    this.server.on('connection', (transport) => {
+      this.addInbound(transport);
+      this.emit('connection', transport);
       this.logger.debug('Peer connection');
     });
 
@@ -52,8 +57,9 @@ export class Pool extends EventEmitter {
     });
   }
 
-  addInbound(socket: Socket) {
-    const peer: Peer = SPeer.fromInbound({ filter: this.filter, handshake: this.handshake }, socket);
+  addInbound(transport: T) {
+    const opts = { filter: this.filter, handshake: this.handshake };
+    const peer: Peer<T> = SimplePeer.fromInbound(opts, transport, this.TransportFactory);
     this.bindPeer(peer);
   }
 
@@ -68,11 +74,12 @@ export class Pool extends EventEmitter {
   }
 
   addOutbound(port: number) {
-    const peer = SPeer.fromOutbound({ port, filter: this.filter, handshake: this.handshake }, this.port);
+    const opts = { port, filter: this.filter, handshake: this.handshake };
+    const peer = SimplePeer.fromOutbound(opts, this.port, this.TransportFactory);
     this.bindPeer(peer);
   }
 
-  bindPeer(peer: Peer) {
+  bindPeer(peer: Peer<T>) {
     this.peers.add(peer);
 
     // Outbound
@@ -99,7 +106,7 @@ export class Pool extends EventEmitter {
     });
   }
 
-  private handlePacket(peer: Peer, packet: Packet) {
+  private handlePacket(peer: Peer<T>, packet: Packet) {
     switch (packet.type) {
       case PACKET.HANDSHAKE:
         return;
@@ -132,9 +139,8 @@ export class Pool extends EventEmitter {
   }
 }
 
-class PeerSet extends Set<Peer> {
-
-  broadcast(packet: Packet, exceptions?: PeerSet) {
+class PeerSet<T extends AbstractTransport> extends Set<Peer<T>> {
+  broadcast(packet: Packet, exceptions?: PeerSet<T>) {
     for (const peer of this) {
       if (exceptions && exceptions.has(peer)) {
         continue;
@@ -142,5 +148,4 @@ class PeerSet extends Set<Peer> {
       peer.send(packet);
     }
   }
-
 }
