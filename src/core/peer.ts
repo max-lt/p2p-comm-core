@@ -1,12 +1,12 @@
 import { EventEmitter } from 'events';
 import { Socket } from 'net';
 import * as net from 'net';
-import { Parser, Packet } from '../parser/parser';
 import { format } from 'util';
 import * as assert from 'assert';
 import { SimpleLogger, Logger } from './logger';
 import { Timer } from './timer';
-import { SimpleParser } from '../parser/simple-parser';
+import { BufferParser, Packet, IPacket } from './parser/buffer-parser';
+import { HandshakePacket, types as PACKET, DataPacket } from './parser/packets';
 
 export interface Peer {
   port: number;
@@ -48,7 +48,7 @@ export class SPeer extends EventEmitter implements Peer {
 
   logger: Logger;
   socket: Socket;
-  parser: Parser;
+  parser: BufferParser;
 
   outbound = false;
   connected = false;
@@ -74,7 +74,7 @@ export class SPeer extends EventEmitter implements Peer {
     this.handshakeTimeout = new Timer(2000);
     this.logger = new SimpleLogger('peer:' + SPeer.counter++);
     this.filter = filter;
-    this.parser = new SimpleParser();
+    this.parser = new BufferParser();
     this.init();
   }
 
@@ -136,7 +136,7 @@ export class SPeer extends EventEmitter implements Peer {
     this.emit('connect');
 
     this.logger.log('handshaking with', port, publicPort);
-    this.send({ type: 'handshake', port: publicPort });
+    this.send(HandshakePacket.fromObject({ port: publicPort }));
   }
 
   private init() {
@@ -177,14 +177,6 @@ export class SPeer extends EventEmitter implements Peer {
   }
 
   private feedParser(data) {
-    const marker = data.toString('base64');
-
-    if (this.filter && this.filter.has(marker)) {
-      return;
-    }
-
-    this.filter.add(marker);
-
     return this.parser.feed(data);
   }
 
@@ -193,15 +185,22 @@ export class SPeer extends EventEmitter implements Peer {
       throw new Error('Destroyed peer sent a packet.');
     }
 
+    this.logger.debug('m?=', packet.uuid, this.filter.has(packet.uuid));
+
+    if (this.filter && this.filter.has(packet.uuid)) {
+      return;
+    }
+
+    this.filter.add(packet.uuid);
+
     switch (packet.type) {
-      case 'handshake':
+      case PACKET.HANDSHAKE:
         this.port = packet.port;
         this.handshaked = true;
         this.handshakeTimeout.clear();
         this.emit('handshake');
         return;
-      case 'message':
-      case 'getpeers':
+      case PACKET.DATA:
         break;
     }
 
@@ -239,17 +238,17 @@ export class SPeer extends EventEmitter implements Peer {
   }
 
   write(data: Buffer) {
-    const marker = data.toString('base64');
-    this.filter.add(marker);
     this.socket.write(data);
   }
 
-  send(data: Packet) {
-    this.write(this.parser.encode(data));
+  send(packet: Packet) {
+    this.logger.debug('m+=', packet.uuid, this.filter.has(packet.uuid));
+    this.filter.add(packet.uuid);
+    this.write(this.parser.encode(packet));
   }
 
   sendMessage(message: string) {
-    this.write(this.parser.encode({ type: 'message', message }));
+    this.write(this.parser.encode(DataPacket.fromObject({ data: Buffer.from(message) })));
   }
 
 }

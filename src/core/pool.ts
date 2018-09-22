@@ -1,8 +1,9 @@
 import { EventEmitter } from 'events';
-import { Packet, MessagePacket } from '../parser/parser';
 import { createServer, Server, Socket, AddressInfo } from 'net';
 import { SPeer, Peer } from './peer';
 import { Logger, SimpleLogger } from './logger';
+import { Packet } from './parser/buffer-parser';
+import { HandshakePacket, types as PACKET, DataPacket } from './parser/packets';
 
 export class Pool extends EventEmitter {
 
@@ -101,20 +102,17 @@ export class Pool extends EventEmitter {
 
   private handlePacket(peer: Peer, packet: Packet) {
     switch (packet.type) {
-      case 'handshake':
-        // this.port = packet.port;
+      case PACKET.HANDSHAKE:
         return;
-      case 'message':
+      case PACKET.DATA:
         this.handleMessage(packet);
         return;
-      case 'getpeers':
-        break;
     }
   }
 
-  handleMessage(packet: MessagePacket) {
+  handleMessage(packet: DataPacket) {
     this.peers.broadcast(packet);
-    this.emit('message', packet.message);
+    this.emit('message', packet.data.toString());
   }
 
   listen(port?: number) {
@@ -122,7 +120,8 @@ export class Pool extends EventEmitter {
   }
 
   sendMessage(message: string) {
-    this.peers.broadcastMessage(message);
+    const data = DataPacket.fromObject({ data: Buffer.from(message) });
+    this.peers.broadcast(data);
   }
 
   connect() {
@@ -142,15 +141,6 @@ class PeerSet extends Set<Peer> {
         continue;
       }
       peer.send(packet);
-    }
-  }
-
-  broadcastMessage(message: string, exceptions?: PeerSet) {
-    for (const peer of this) {
-      if (exceptions && exceptions.has(peer)) {
-        continue;
-      }
-      peer.sendMessage(message);
     }
   }
 
