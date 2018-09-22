@@ -7,9 +7,12 @@
     "test": "test"
   },
   "scripts": {
-    "dev": "DEBUG=p2p-comm* npx ts-node-dev src/index.ts",
-    "tsc": "npx tsc",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "check": "npx tsc --noEmit",
+    "build": "npx tsc",
+    "dev": "DEBUG=p2p-comm* npx ts-node-dev src/dev.ts",
+    "start": "node dist/dev",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "prepack": "npm run build"
   },
   "author": "",
   "license": "ISC",
