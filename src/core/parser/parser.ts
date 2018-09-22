@@ -2,11 +2,10 @@ import { EventEmitter } from 'events';
 import * as assert from 'assert';
 
 import { Logger, SimpleLogger } from '../logger';
-import { HandshakePacket, DataPacket, types } from './packets';
-import { IHandshakePacket, IDataPacket } from './packets';
-
-export type Packet = HandshakePacket | DataPacket;
-export type IPacket = IHandshakePacket | IDataPacket;
+import { decodeRawMeta, metaLength, types } from './packets/util';
+import { DataPacket } from './packets';
+import { HandshakePacket } from './packets';
+import { Packet } from './packets';
 
 const EMPTY = Buffer.alloc(0);
 
@@ -36,9 +35,17 @@ export class BufferParser extends EventEmitter /* implements Parser */ {
 
     let packet: Packet = null;
 
-    do {
+    while (buf.length > metaLength) {
       if (safe < 0) {
         return;
+      }
+
+      const meta = decodeRawMeta(buf);
+
+      // this.logger.log('meta', meta && meta.size + metaLength, buf.length);
+
+      if (meta.size + metaLength > buf.length) {
+        break;
       }
 
       packet = this.decode(buf);
@@ -55,13 +62,12 @@ export class BufferParser extends EventEmitter /* implements Parser */ {
 
       buf = buf.slice(packet.getTotalSize());
 
+      if (buf.length) {
+        this.logger.debug('left', buf.length);
+      }
+
       this.emit('packet', packet);
-
-      // if (!this.buf.length) {
-      //   return;
-      // }
-
-    } while (buf.length);
+    }
 
     this.buf = Buffer.concat([buf]);
     lock = false;

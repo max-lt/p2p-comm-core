@@ -2,8 +2,7 @@ import { EventEmitter } from 'events';
 import { createServer, Server, Socket, AddressInfo } from 'net';
 import { SPeer, Peer } from './peer';
 import { Logger, SimpleLogger } from './logger';
-import { Packet } from './parser/buffer-parser';
-import { HandshakePacket, types as PACKET, DataPacket } from './parser/packets';
+import { types as PACKET, DataPacket, Packet } from './parser/packets/';
 
 export class Pool extends EventEmitter {
 

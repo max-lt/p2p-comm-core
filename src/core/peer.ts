@@ -3,10 +3,11 @@ import { Socket } from 'net';
 import * as net from 'net';
 import { format } from 'util';
 import * as assert from 'assert';
+
 import { SimpleLogger, Logger } from './logger';
 import { Timer } from './timer';
-import { BufferParser, Packet, IPacket } from './parser/buffer-parser';
-import { HandshakePacket, types as PACKET, DataPacket } from './parser/packets';
+import { BufferParser } from './parser/parser';
+import { HandshakePacket, types as PACKET, DataPacket, Packet } from './parser/packets';
 
 export interface Peer {
   port: number;

@@ -22,7 +22,7 @@ process.stdin.on('data', function (data) {
       data = Buffer.from('<empty>\n');
       break;
     case 'bourre!\n':
-      let i = 1000;
+      let i = 100;
       while (i--) {
         pool.sendMessage(i + ' ' + randomBytes(64).toString('base64') + '\n');
       }
