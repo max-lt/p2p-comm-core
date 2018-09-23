@@ -13,9 +13,10 @@ export class P2PNode<T extends AbstractTransport> extends EventEmitter {
     super();
     this.id = randomBytes(8).toString('hex');
     this.pool = new Pool({ seed, nodeId: this.id }, Transport, Server);
-    this.pool.on('data', (data) => {
-      this.emit('data', data);
-    });
+    this.pool.on('listening', (data) => this.emit('listening', data));
+    this.pool.on('data', (data) => this.emit('data', data));
+    this.pool.on('peer', (peer) => this.emit('peer', peer));
+    this.pool.on('error', (err) => this.emit('error', err));
   }
 
   listen(port?: number) {

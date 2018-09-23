@@ -12,6 +12,7 @@
     "dev": "DEBUG=p2p-comm* npx ts-node-dev src/dev.ts",
     "start": "node dist/dev",
     "test": "npx mocha -r ts-node/register test/**/*.ts --timeout 60000 --exit",
+    "test:debug": "DEBUG=p2p-comm* npm test",
     "prepack": "npm run build"
   },
   "author": "",
