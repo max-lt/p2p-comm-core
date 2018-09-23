@@ -5,7 +5,7 @@ import * as assert from 'assert';
 import { SimpleLogger, Logger } from './logger';
 import { Timer } from './util/timer';
 import { BufferParser } from './parser/parser';
-import { HandshakePacket, types as PACKET, DataPacket, Packet } from './parser/packets';
+import { HandshakePacket, types as PACKET, Packet, PingPacket, PongPacket } from './parser/packets';
 import { AbstractTransport } from '../transport/transport';
 import { wait } from './util/wait';
 
@@ -32,6 +32,8 @@ export interface Peer<T> {
   once(event: 'error', listener: (err: Error) => void): void;
 
   destroy();
+
+  activate();
 
   connect(transport: T);
 
@@ -67,15 +69,22 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
   connectTimeout: Timer;
   handshakeTimeout: Timer;
 
+  pingTimeout: Timer;
+  pongTimeout: Timer;
+
   constructor({ port, filter }) {
     super();
     this.port = port;
-    this.connectTimeout = new Timer(2000);
-    this.handshakeTimeout = new Timer(2000);
+
+    this.connectTimeout = new Timer(5 * 1000);
+    this.handshakeTimeout = new Timer(5 * 1000);
     this.logger = new SimpleLogger('peer:' + SimplePeer.counter++);
     this.filter = filter;
     this.parser = new BufferParser();
     this.init();
+
+    this.pingTimeout = new Timer(60 * 1000);
+    this.pongTimeout = new Timer(10 * 1000);
   }
 
   static fromInbound(options, transport) {
@@ -144,6 +153,13 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
     });
   }
 
+  expectPong() {
+    this.pongTimeout.start(() => {
+      this.logger.warn(`${this.outbound ? 'Outbound' : 'Inbound'} peer did not pong`);
+      this.destroy();
+    });
+  }
+
   private init() {
 
     this.parser.on('packet', (packet) => {
@@ -190,16 +206,15 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
       throw new Error('Destroyed peer sent a packet.');
     }
 
-    this.logger.debug('m <-', packet.packetId, this.filter.has(packet.packetId));
-    // this.logger.debug('m?=', this.id);
+    this.pingTimeout.reset();
+
+    this.logger.debug('m <-', packet.getTypeName(), packet.packetId, this.filter.has(packet.packetId));
 
     if (this.filter && this.filter.has(packet.packetId)) {
       return;
     }
 
     this.filter.add(packet.packetId);
-    // const peerId = this.peerId || '???';
-    // this.logger.debug(`H<${peerId}>`, JSON.stringify(packet.toJSON(), null, 2));
 
     switch (packet.type) {
       case PACKET.HANDSHAKE:
@@ -213,8 +228,15 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
         this.handshakeTimeout.clear();
         this.emit('handshake', this.outbound);
         return;
-      case PACKET.DATA:
+      case PACKET.PONG:
+        this.pongTimeout.clear();
+        break;
+      case PACKET.PING:
         await wait(Math.random() * 3 * 1000);
+        this.send(PongPacket.fromObject());
+        break;
+      case PACKET.DATA:
+        // await wait(Math.random() * 3 * 1000);
         break;
     }
 
@@ -231,6 +253,15 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
       err = new Error(msg);
     }
     this.emit('error', err);
+  }
+
+  activate() {
+    this.pingTimeout.start(() => this.ping());
+  }
+
+  ping() {
+    this.send(PingPacket.fromObject());
+    this.expectPong();
   }
 
   destroy() {
@@ -259,6 +290,7 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
 
   send(packet: Packet) {
     assert(!this.filter.has(packet.packetId), 'Send should not be used to braodcast');
-    this.transport.write(packet.toRaw());
+    this.logger.debug('m ->', packet.getTypeName(), packet.packetId);
+    this.write(packet.toRaw());
   }
 }

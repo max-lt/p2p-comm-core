@@ -1,5 +1,7 @@
 import * as crypto from 'crypto';
-import { OMeta, metaLength, decodeRawMeta, metaLengths } from './util';
+import { OMeta, metaLength, decodeRawMeta, metaLengths, types } from './util';
+
+const typesNames = Object.entries(types).reduce((acc, [k, v]) => (acc[v] = k, acc), {});
 
 // tslint:disable-next-line:no-empty-interface
 export interface IAbstractPacket { }
@@ -63,5 +65,33 @@ export abstract class AbstractPacket implements OAbstractPacket {
 
   getTotalSize() {
     return this.getSize() + metaLength;
+  }
+
+  getTypeName() {
+    return typesNames[this.type] || `INVALID (${this.type})`;
+  }
+}
+
+export abstract class EmptyPacket extends AbstractPacket {
+  protected fromRaw(buf: Buffer): this {
+    super.fromRaw(buf);
+    return this;
+  }
+
+  protected fromOptions(): this {
+    super.fromOptions({});
+    return this;
+  }
+
+  toJSON(): OMeta {
+    return Object.assign(this.getMeta(), { type: this.type });
+  }
+
+  toRaw(): Buffer {
+    return this.encodeRawMeta();
+  }
+
+  getSize() {
+    return 0;
   }
 }

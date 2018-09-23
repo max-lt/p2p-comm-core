@@ -116,6 +116,7 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
       this.logger.debug(`Pool received handshake from ${outbound ? 'outbound' : 'inbound'} peer ${peer.port}`);
       this.logger.debug(`Peer ${peer.port} will now be known as ${peer.id}`);
       this.emit('peer', peer);
+      peer.activate();
       if (!outbound) {
         this.logger.debug(`Handskaking back with ${this.port}`);
         peer.handshake(this.port, this.nodeId);

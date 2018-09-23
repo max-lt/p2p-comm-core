@@ -39,9 +39,14 @@ class MetaPacket extends AbstractPacket {
 }
 
 describe('packets.meta tests', () => {
+  const packet = MetaPacket.fromObject({});
+
   it('sould be able to encode/decode packet metadata', () => {
-    const meta = MetaPacket.fromObject({});
-    const copy = MetaPacket.fromRaw(meta.toRaw());
-    assert.equal(meta.toRaw().toString('hex'), copy.toRaw().toString('hex'));
+    const copy = MetaPacket.fromRaw(packet.toRaw());
+    assert.equal(packet.toRaw().toString('hex'), copy.toRaw().toString('hex'));
+  });
+
+  it('should be able to return it\'s raw size', () => {
+    assert.equal(packet.toRaw().length, packet.getTotalSize());
   });
 });

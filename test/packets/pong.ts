@@ -1,12 +1,12 @@
 import * as assert from 'assert';
 
-import { HandshakePacket } from '../../src/core/parser/packets';
+import { PongPacket } from '../../src/core/parser/packets';
 
-describe('packets.handshake tests', () => {
-  const packet = HandshakePacket.fromObject({ port: 80, peerId: '1234' });
+describe('packets.pong tests', () => {
+  const packet = PongPacket.fromObject();
 
   it('sould be able to encode/decode handshake packet', () => {
-    const copy = HandshakePacket.fromRaw(packet.toRaw());
+    const copy = PongPacket.fromRaw(packet.toRaw());
     assert.equal(packet.toRaw().toString('hex'), copy.toRaw().toString('hex'));
   });
 
