@@ -115,10 +115,4 @@ export class BufferParser extends EventEmitter /* implements Parser */ {
 
     return packet;
   }
-
-  encode(packet: Packet): Buffer {
-    // this.logger.debug('Encoding', packet.toJSON());
-    return packet.toRaw();
-  }
-
 }

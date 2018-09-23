@@ -22,7 +22,7 @@ export abstract class AbstractPacket implements OAbstractPacket {
   abstract toRaw(): Buffer;
 
   protected fromOptions(opts: IAbstractPacket) {
-    this.packetId = opts.packetId || crypto.randomBytes(16).toString('hex');
+    this.packetId = opts.packetId || crypto.randomBytes(8).toString('hex');
     this.date = new Date(opts.date || +new Date);
   }
 

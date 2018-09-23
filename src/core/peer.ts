@@ -7,6 +7,7 @@ import { Timer } from './util/timer';
 import { BufferParser } from './parser/parser';
 import { HandshakePacket, types as PACKET, DataPacket, Packet } from './parser/packets';
 import { AbstractTransport } from '../transport/transport';
+import { wait } from './util/wait';
 
 export interface Peer<T> {
 
@@ -39,8 +40,6 @@ export interface Peer<T> {
   write(data: Buffer);
 
   send(packet: Packet);
-
-  sendMessage(str: string);
 }
 
 
@@ -131,8 +130,7 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
 
   handshake(publicPort, nodeId) {
     this.logger.log(`handshaking: ${publicPort} -> ${this.port}`);
-    const p = HandshakePacket.fromObject({ port: publicPort, peerId: nodeId });
-    this.send(p);
+    this.send(HandshakePacket.fromObject({ port: publicPort, peerId: nodeId }));
 
     if (this.outbound) {
       this.expectHandshake();
@@ -187,12 +185,12 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
     return this.parser.feed(data);
   }
 
-  private handlePacket(packet: Packet) {
+  private async handlePacket(packet: Packet) {
     if (this.destroyed) {
       throw new Error('Destroyed peer sent a packet.');
     }
 
-    // this.logger.debug('m?=', packet.packetId, this.filter.has(packet.packetId));
+    this.logger.debug('m <-', packet.packetId, this.filter.has(packet.packetId));
     // this.logger.debug('m?=', this.id);
 
     if (this.filter && this.filter.has(packet.packetId)) {
@@ -216,6 +214,7 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
         this.emit('handshake', this.outbound);
         return;
       case PACKET.DATA:
+        await wait(Math.random() * 3 * 1000);
         break;
     }
 
@@ -259,13 +258,7 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
   }
 
   send(packet: Packet) {
-    // this.logger.debug('m+=', packet.packetId, this.filter.has(packet.packetId));
-    this.filter.add(packet.packetId);
-    this.write(this.parser.encode(packet));
+    assert(!this.filter.has(packet.packetId), 'Send should not be used to braodcast');
+    this.transport.write(packet.toRaw());
   }
-
-  sendMessage(message: string) {
-    this.write(this.parser.encode(DataPacket.fromObject({ data: Buffer.from(message) })));
-  }
-
 }

@@ -29,8 +29,8 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
 
   constructor(
     opts: { seed: number[], nodeId },
-     Transport: typeof AbstractTransport,
-     Server: typeof AbstractServer
+    Transport: typeof AbstractTransport,
+    Server: typeof AbstractServer
   ) {
     super();
     this.port = 0;
@@ -141,7 +141,7 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
       case PACKET.HANDSHAKE:
         return;
       case PACKET.DATA:
-        this.peers.broadcast(packet);
+        this.broadcast(packet);
         this.emit('data', packet.data);
         return;
     }
@@ -151,8 +151,14 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
     this.server.listen(port);
   }
 
+  private broadcast(packet: Packet) {
+    this.logger.debug('m ->', packet.packetId, this.filter.has(packet.packetId));
+    this.filter.add(packet.packetId);
+    this.peers.broadcast(packet.toRaw());
+  }
+
   send(data: Buffer) {
-    this.peers.broadcast(DataPacket.fromObject({ data }));
+    this.broadcast(DataPacket.fromObject({ data }));
   }
 
   connect() {
@@ -165,12 +171,12 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
 }
 
 class PeerSet<T extends AbstractTransport> extends Set<Peer<T>> {
-  broadcast(packet: Packet, exceptions?: PeerSet<T>) {
+  broadcast(data: Buffer, exceptions?: PeerSet<T>) {
     for (const peer of this) {
       if (exceptions && exceptions.has(peer)) {
         continue;
       }
-      peer.send(packet);
+      peer.write(data);
     }
   }
 }
