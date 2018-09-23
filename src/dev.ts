@@ -1,5 +1,5 @@
-import { Pool } from './core/pool';
 import { randomBytes } from 'crypto';
+import { P2PNode as Node } from './core/node';
 import { TCPTransport, TCPServer } from './transport/tcp';
 
 Buffer.prototype.toJSON = function () {
@@ -10,31 +10,30 @@ const env = process.env;
 
 const seed = process.argv.slice(2).map(e => parseInt(e));
 
-const nodeId = randomBytes(16).toString('hex');
+const node = new Node({ seed }, TCPTransport, TCPServer);
 
-console.log({ seed, nodeId });
-const pool = new Pool({ seed, nodeId }, TCPTransport.connect, TCPServer.create);
+const name = env.NAME || randomBytes(4).toString('hex');
 
-pool.listen(parseInt(env.PORT) || undefined);
+node.listen(parseInt(env.PORT) || undefined);
 
-pool.on('message', (m, p) => {
-  process.stdout.write(p.id + ' > ' + m);
+node.on('data', (data) => {
+  process.stdout.write(data.toString());
 });
 
 process.stdin.resume();
-process.stdin.on('data', function (data) {
-
-  switch (data.toString()) {
+process.stdin.on('data', function (data: Buffer) {
+  let message = data.toString();
+  switch (message) {
     case '\n':
-      data = Buffer.from('<empty>\n');
+    message = '<empty>\n';
       break;
     case 'bourre!\n':
       let i = 100;
       while (i--) {
-        pool.sendMessage(i + ' ' + randomBytes(16).toString('base64') + '\n');
+        node.send(Buffer.from(`${name} -> ${i} ${randomBytes(16).toString('base64')}\n`));
       }
       return;
   }
 
-  pool.sendMessage(data.toString());
+  node.send(Buffer.from(`${name} -> ${message}`));
 });

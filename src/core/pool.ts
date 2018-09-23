@@ -22,10 +22,15 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
   seeds: number[];
   filter: Set<string>;
 
+  maxInbound = 8;
+  maxOutbound = 8;
+
+  createTransport: (port: number) => AbstractTransport;
+
   constructor(
     opts: { seed: number[], nodeId },
-    private TransportFactory: (port: number) => T,
-    private ServerFactory: () => AbstractServer<T>
+     Transport: typeof AbstractTransport,
+     Server: typeof AbstractServer
   ) {
     super();
     this.port = 0;
@@ -33,9 +38,11 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
     this.filter = new Set();
     this.peers = new PeerSet;
     this.logger = new SimpleLogger('pool');
-    this.server = this.ServerFactory();
+    this.server = Server.create();
     this.seeds = opts && opts.seed || [];
     this.nodeId = opts.nodeId;
+
+    this.createTransport = Transport.connect;
 
     this.logger.info('Created pool');
     this.initServer();
@@ -65,7 +72,7 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
 
   addInbound(transport: T) {
     const opts = { filter: this.filter, handshake: this.handshake };
-    const peer: Peer<T> = SimplePeer.fromInbound(opts, transport, this.TransportFactory);
+    const peer: Peer<T> = SimplePeer.fromInbound(opts, transport);
     this.bindPeer(peer);
   }
 
@@ -84,11 +91,11 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
     let i = 4;
     while (i--) {
       await wait(1000);
-      const peer = SimplePeer.fromOutbound(opts, this.TransportFactory);
+      const peer = SimplePeer.fromOutbound(opts);
       this.logger.log('Outbound peer', peer.port);
       this.bindPeer(peer);
       try {
-        await peer.connect();
+        await peer.connect(this.createTransport(port));
         return;
       } catch (err) {
         this.logger.warn(`Failed to connect to peer: ${err.message}`);
@@ -135,7 +142,7 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
         return;
       case PACKET.DATA:
         this.peers.broadcast(packet);
-        this.emit('message', packet.data.toString(), peer);
+        this.emit('data', packet.data);
         return;
     }
   }
@@ -144,9 +151,8 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
     this.server.listen(port);
   }
 
-  sendMessage(message: string) {
-    const data = DataPacket.fromObject({ data: Buffer.from(message) });
-    this.peers.broadcast(data);
+  send(data: Buffer) {
+    this.peers.broadcast(DataPacket.fromObject({ data }));
   }
 
   connect() {

@@ -19,20 +19,20 @@ export interface Peer<T> {
   handshaked: boolean;
 
   on(event: 'connect', listener: () => void): this;
-  on(event: 'handshake', listener: (arg: void) => void): this;
+  on(event: 'handshake', listener: (outbound: boolean) => void): this;
   on(event: 'packet', listener: (data: Packet) => void): this;
   on(event: 'close', listener: (had_error: boolean) => void): this;
   on(event: 'error', listener: (err: Error) => void): void;
 
   once(event: 'connect', listener: () => void): this;
-  once(event: 'handshake', listener: (arg: void) => void): this;
+  once(event: 'handshake', listener: (outbound: boolean) => void): this;
   once(event: 'packet', listener: (data: Packet) => void): this;
   once(event: 'close', listener: (had_error: boolean) => void): this;
   once(event: 'error', listener: (err: Error) => void): void;
 
   destroy();
 
-  connect();
+  connect(transport: T);
 
   handshake(port: number, nodeId: string);
 
@@ -68,7 +68,7 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
   connectTimeout: Timer;
   handshakeTimeout: Timer;
 
-  constructor({ port, filter }, private TransportFactory: (port: number) => T) {
+  constructor({ port, filter }) {
     super();
     this.port = port;
     this.connectTimeout = new Timer(2000);
@@ -79,16 +79,14 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
     this.init();
   }
 
-  static fromInbound(options, transport, Transport) {
-    const peer = new this(options, Transport);
+  static fromInbound(options, transport) {
+    const peer = new this(options);
     peer.accept(transport);
     return peer;
   }
 
-  static fromOutbound(options, Transport) {
-    return new this(options, Transport);
-    // peer.connect(options.port);
-    // return peer;
+  static fromOutbound(options) {
+    return new this(options);
   }
 
   /**
@@ -104,9 +102,8 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
   /**
    * Create an outbound transport.
    */
-  async connect(): Promise<void> {
+  async connect(transport: T): Promise<void> {
     const port = this.port;
-    const transport = this.TransportFactory(port);
     this.logger.debug('Connecting to', port);
     this.outbound = true;
     this.connected = false;
@@ -137,7 +134,6 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
     const p = HandshakePacket.fromObject({ port: publicPort, peerId: nodeId });
     this.send(p);
 
-    //
     if (this.outbound) {
       this.expectHandshake();
     }

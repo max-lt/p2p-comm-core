@@ -1,11 +1,12 @@
-import { createServer, Server, Socket, connect } from 'net';
+import { createServer, Server, Socket } from 'net';
+import * as net from 'net';
 import { AbstractServer, AbstractTransport } from './transport';
 
 
 export class TCPTransport extends Socket implements AbstractTransport {
 
   static connect(port: number): TCPTransport {
-    return connect(port);
+    return net.connect(port);
   }
 
 }
