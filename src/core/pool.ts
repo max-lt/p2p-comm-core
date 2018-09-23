@@ -1,32 +1,41 @@
 import { EventEmitter } from 'events';
-import { createServer, Server, Socket, AddressInfo } from 'net';
-import { SPeer, Peer } from './peer';
+import { SimplePeer, Peer } from './peer';
 import { Logger, SimpleLogger } from './logger';
 import { types as PACKET, DataPacket, Packet } from './parser/packets/';
 
-export class Pool extends EventEmitter {
+import { AbstractServer, AbstractTransport } from '../transport/transport';
+import { wait } from './util/wait';
+
+export class Pool<T extends AbstractTransport> extends EventEmitter {
+
+  nodeId: string;
+  litening = false;
 
   // Defines either handshake is mandatory or not
   handshake: boolean;
 
-  peers: PeerSet;
+  peers: PeerSet<T>;
   logger: Logger;
-  server: Server;
+  server: AbstractServer<T>;
 
   port: number;
   seeds: number[];
   filter: Set<string>;
 
-  constructor(opts?: { seed: number[] }) {
+  constructor(
+    opts: { seed: number[], nodeId },
+    private TransportFactory: (port: number) => T,
+    private ServerFactory: () => AbstractServer<T>
+  ) {
     super();
-
     this.port = 0;
     this.handshake = true;
     this.filter = new Set();
     this.peers = new PeerSet;
     this.logger = new SimpleLogger('pool');
-    this.server = createServer();
+    this.server = this.ServerFactory();
     this.seeds = opts && opts.seed || [];
+    this.nodeId = opts.nodeId;
 
     this.logger.info('Created pool');
     this.initServer();
@@ -37,9 +46,10 @@ export class Pool extends EventEmitter {
       this.emit('error', err);
     });
 
-    this.server.on('connection', (socket) => {
-      this.addInbound(socket);
-      this.emit('connection', socket);
+    // Inbound
+    this.server.on('connection', (transport) => {
+      this.addInbound(transport);
+      this.emit('connection', transport);
       this.logger.debug('Peer connection');
     });
 
@@ -47,13 +57,15 @@ export class Pool extends EventEmitter {
       const data: any = this.server.address();
       this.logger.info('Pool server listening on.', data);
       this.port = data.port;
+      this.litening = true;
       this.emit('listening', data);
       this.discoverSeeds();
     });
   }
 
-  addInbound(socket: Socket) {
-    const peer: Peer = SPeer.fromInbound({ filter: this.filter, handshake: this.handshake }, socket);
+  addInbound(transport: T) {
+    const opts = { filter: this.filter, handshake: this.handshake };
+    const peer: Peer<T> = SimplePeer.fromInbound(opts, transport, this.TransportFactory);
     this.bindPeer(peer);
   }
 
@@ -67,21 +79,39 @@ export class Pool extends EventEmitter {
     });
   }
 
-  addOutbound(port: number) {
-    const peer = SPeer.fromOutbound({ port, filter: this.filter, handshake: this.handshake }, this.port);
-    this.bindPeer(peer);
+  private async addOutbound(port: number) {
+    const opts = { port, filter: this.filter, handshake: this.handshake };
+    let i = 4;
+    while (i--) {
+      await wait(1000);
+      const peer = SimplePeer.fromOutbound(opts, this.TransportFactory);
+      this.logger.log('Outbound peer', peer.port);
+      this.bindPeer(peer);
+      try {
+        await peer.connect();
+        return;
+      } catch (err) {
+        this.logger.warn(`Failed to connect to peer: ${err.message}`);
+      }
+    }
   }
 
-  bindPeer(peer: Peer) {
+  private bindPeer(peer: Peer<T>) {
     this.peers.add(peer);
 
     // Outbound
     peer.once('connect', () => {
-      this.logger.debug('Peer connected', peer.port);
+      this.logger.debug(`Connected to peer ${peer.port}, handshaking with ${this.port}`);
+      peer.handshake(this.port, this.nodeId);
     });
 
-    peer.on('handshake', () => {
-      this.logger.log('Pool received handshake');
+    peer.once('handshake', (outbound) => {
+      this.logger.debug(`Pool received handshake from ${outbound ? 'outbound' : 'inbound'} peer ${peer.port}`);
+      this.logger.debug(`Peer ${peer.port} will now be known as ${peer.id}`);
+      if (!outbound) {
+        this.logger.debug(`Handskaking back with ${this.port}`);
+        peer.handshake(this.port, this.nodeId);
+      }
     });
 
     peer.on('error', (err) => {
@@ -99,19 +129,15 @@ export class Pool extends EventEmitter {
     });
   }
 
-  private handlePacket(peer: Peer, packet: Packet) {
+  private handlePacket(peer: Peer<T>, packet: Packet) {
     switch (packet.type) {
       case PACKET.HANDSHAKE:
         return;
       case PACKET.DATA:
-        this.handleMessage(packet);
+        this.peers.broadcast(packet);
+        this.emit('message', packet.data.toString(), peer);
         return;
     }
-  }
-
-  handleMessage(packet: DataPacket) {
-    this.peers.broadcast(packet);
-    this.emit('message', packet.data.toString());
   }
 
   listen(port?: number) {
@@ -132,9 +158,8 @@ export class Pool extends EventEmitter {
   }
 }
 
-class PeerSet extends Set<Peer> {
-
-  broadcast(packet: Packet, exceptions?: PeerSet) {
+class PeerSet<T extends AbstractTransport> extends Set<Peer<T>> {
+  broadcast(packet: Packet, exceptions?: PeerSet<T>) {
     for (const peer of this) {
       if (exceptions && exceptions.has(peer)) {
         continue;
@@ -142,5 +167,4 @@ class PeerSet extends Set<Peer> {
       peer.send(packet);
     }
   }
-
 }

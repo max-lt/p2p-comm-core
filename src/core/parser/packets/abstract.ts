@@ -1,17 +1,17 @@
-import * as v4 from 'uuid/v4';
+import * as crypto from 'crypto';
 import { OMeta, metaLength, decodeRawMeta, metaLengths } from './util';
 
 export interface IAbstractPacket {
-  uuid?: string;
+  packetId?: string;
   date?: Date;
 }
 export interface OAbstractPacket {
-  uuid: string;
+  packetId: string;
   date: Date;
 }
 export abstract class AbstractPacket implements OAbstractPacket {
 
-  uuid: string;
+  packetId: string;
   date: Date;
   type = -1;
 
@@ -22,13 +22,13 @@ export abstract class AbstractPacket implements OAbstractPacket {
   abstract toRaw(): Buffer;
 
   protected fromOptions(opts: IAbstractPacket) {
-    this.uuid = opts.uuid || v4();
+    this.packetId = opts.packetId || crypto.randomBytes(16).toString('hex');
     this.date = new Date(opts.date || +new Date);
   }
 
   protected fromRaw(buf: Buffer) {
     const meta = this.decodeRawMeta(buf);
-    this.fromOptions({ uuid: meta.uuid, date: meta.date });
+    this.fromOptions({ packetId: meta.packetId, date: meta.date });
     this.type = meta.type;
   }
 
@@ -37,8 +37,7 @@ export abstract class AbstractPacket implements OAbstractPacket {
     meta.writeUInt8(this.type, 0);
     meta.writeUInt32BE(this.getSize(), metaLengths.TYPE);
     meta.writeDoubleBE(+this.date, metaLengths.TYPE + metaLengths.LEN);
-    const uuidHex = this.uuid.split('-').join('');
-    meta.write(uuidHex, metaLengths.TYPE + metaLengths.LEN + metaLengths.DATE, uuidHex.length / 2, 'hex');
+    meta.write(this.packetId, metaLengths.TYPE + metaLengths.LEN + metaLengths.DATE, this.packetId.length / 2, 'hex');
     return meta;
   }
 
@@ -48,7 +47,7 @@ export abstract class AbstractPacket implements OAbstractPacket {
 
   protected getMeta(): OMeta {
     return {
-      uuid: this.uuid,
+      packetId: this.packetId,
       date: this.date,
       type: this.type,
       size: this.getSize(),

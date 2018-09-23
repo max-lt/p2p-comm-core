@@ -1,0 +1,9 @@
+# Ignore all
+**
+
+# Exept
+!README.md
+!package.json
+!package-lock.json
+
+!dist/**
