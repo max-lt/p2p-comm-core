@@ -214,7 +214,7 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
         this.emit('handshake', this.outbound);
         return;
       case PACKET.DATA:
-        await wait(Math.random() * 3 * 1000);
+        // await wait(Math.random() * 3 * 1000);
         break;
     }
 

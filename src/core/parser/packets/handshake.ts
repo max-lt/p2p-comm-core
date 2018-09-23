@@ -1,4 +1,4 @@
-import { PacketTypes, metaLength, types, readData, writeData, writeUInt32 } from './util';
+import { PacketTypes, metaLength, types, readData, writeData, writeUInt32, encodePeer, decodePeer } from './util';
 import { IAbstractPacket, OAbstractPacket, AbstractPacket } from './abstract';
 
 export interface IHandshakePacket extends IAbstractPacket {
@@ -29,11 +29,10 @@ export class HandshakePacket extends AbstractPacket implements OHandshakePacket 
 
   protected fromRaw(buf: Buffer): HandshakePacket {
     super.fromRaw(buf);
-    this.port = buf.readUInt32BE(metaLength);
-    const [host, hostOffset] = readData(buf, metaLength + 4);
-    this.host = host.toString();
-    const [peerId] = readData(buf, hostOffset);
-    this.peerId = peerId.toString('hex');
+    const [peer] = decodePeer(buf, metaLength);
+    this.port = peer.port;
+    this.host = peer.host;
+    this.peerId = peer.peerId;
     return this;
   }
 
@@ -55,11 +54,9 @@ export class HandshakePacket extends AbstractPacket implements OHandshakePacket 
   }
 
   toRaw(): Buffer {
-    const port = writeUInt32(this.port);
-    const host = writeData(Buffer.from(this.host));
-    const peerId = writeData(Buffer.from(this.peerId, 'hex'));
+    const info = encodePeer(this);
     const meta = this.encodeRawMeta();
-    return Buffer.concat([meta, port, host, peerId]);
+    return Buffer.concat([meta, info]);
   }
 
   getSize() {

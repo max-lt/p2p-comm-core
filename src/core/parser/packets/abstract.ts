@@ -65,3 +65,27 @@ export abstract class AbstractPacket implements OAbstractPacket {
     return this.getSize() + metaLength;
   }
 }
+
+export abstract class EmptyPacket extends AbstractPacket {
+  protected fromRaw(buf: Buffer): this {
+    super.fromRaw(buf);
+    return this;
+  }
+
+  protected fromOptions(): this {
+    super.fromOptions({});
+    return this;
+  }
+
+  toJSON(): OMeta {
+    return Object.assign(this.getMeta(), { type: this.type });
+  }
+
+  toRaw(): Buffer {
+    return this.encodeRawMeta();
+  }
+
+  getSize() {
+    return 0;
+  }
+}

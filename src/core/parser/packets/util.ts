@@ -2,12 +2,18 @@ export interface PacketTypes {
   DATA: 0x81;
   HANDSHAKE: 0x82;
   GETPEERS: 0x83;
+  SENDPEERS: 0x84;
+  PING: 0x85;
+  PONG: 0x86;
 }
 
 export const types: PacketTypes = {
   DATA: 0x81,
   HANDSHAKE: 0x82,
-  GETPEERS: 0x83
+  GETPEERS: 0x83,
+  SENDPEERS: 0x84,
+  PING: 0x85,
+  PONG: 0x86
 };
 
 export const metaLengths = {
@@ -52,3 +58,20 @@ export interface OMeta {
   size: number;
 }
 
+export interface PeerInfo { host: string; port: number; peerId: string; }
+
+export function encodePeer(peer: PeerInfo): Buffer {
+  const port = writeUInt32(peer.port);
+  const host = writeData(Buffer.from(peer.host));
+  const peerId = writeData(Buffer.from(peer.peerId, 'hex'));
+  return Buffer.concat([port, host, peerId]);
+}
+
+export function decodePeer(buf: Buffer, offset: number): [PeerInfo, number] {
+  const port = buf.readUInt32BE(offset);
+  const [_host, hostOffset] = readData(buf, offset + 4);
+  const host = _host.toString();
+  const [_peerId, peerIdOffset] = readData(buf, hostOffset);
+  const peerId = _peerId.toString('hex');
+  return [{ port, host, peerId }, peerIdOffset];
+}
