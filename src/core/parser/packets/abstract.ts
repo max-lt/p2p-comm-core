@@ -1,10 +1,8 @@
 import * as crypto from 'crypto';
 import { OMeta, metaLength, decodeRawMeta, metaLengths } from './util';
 
-export interface IAbstractPacket {
-  packetId?: string;
-  date?: Date;
-}
+// tslint:disable-next-line:no-empty-interface
+export interface IAbstractPacket { }
 export interface OAbstractPacket {
   packetId: string;
   date: Date;
@@ -15,20 +13,27 @@ export abstract class AbstractPacket implements OAbstractPacket {
   date: Date;
   type = -1;
 
-  static fromRaw(data: Buffer) { }
+  static fromRaw(data: Buffer) {
+    throw new Error('Not overwrited');
+  }
 
-  static fromObject(obj: Object) { }
+  static fromObject(obj: Object) {
+    throw new Error('Not overwrited');
+  }
 
   abstract toRaw(): Buffer;
 
+  abstract toJSON(): Object;
+
   protected fromOptions(opts: IAbstractPacket) {
-    this.packetId = opts.packetId || crypto.randomBytes(8).toString('hex');
-    this.date = new Date(opts.date || +new Date);
+    this.packetId = crypto.randomBytes(8).toString('hex');
+    this.date = new Date();
   }
 
   protected fromRaw(buf: Buffer) {
     const meta = this.decodeRawMeta(buf);
-    this.fromOptions({ packetId: meta.packetId, date: meta.date });
+    this.packetId = meta.packetId;
+    this.date = meta.date;
     this.type = meta.type;
   }
 
