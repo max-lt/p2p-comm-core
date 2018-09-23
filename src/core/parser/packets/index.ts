@@ -19,4 +19,4 @@ export { PongPacket };
 import { types } from './util';
 export { types };
 
-export type Packet = HandshakePacket | DataPacket | GetpeersPacket;
+export type Packet = HandshakePacket | DataPacket | GetpeersPacket | SendpeersPacket | PingPacket | PongPacket;

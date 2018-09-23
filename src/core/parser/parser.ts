@@ -2,7 +2,7 @@ import { EventEmitter } from 'events';
 
 import { Logger, SimpleLogger } from '../logger';
 import { decodeRawMeta, metaLength, types } from './packets/util';
-import { DataPacket } from './packets';
+import { DataPacket, PingPacket, PongPacket, GetpeersPacket, SendpeersPacket } from './packets';
 import { HandshakePacket } from './packets';
 import { Packet } from './packets';
 
@@ -37,7 +37,7 @@ export class BufferParser extends EventEmitter /* implements Parser */ {
 
     let packet: Packet = null;
 
-    while (buf.length > metaLength) {
+    while (buf.length >= metaLength) {
       if (safe < 0) {
         return;
       }
@@ -104,8 +104,17 @@ export class BufferParser extends EventEmitter /* implements Parser */ {
       case types.HANDSHAKE:
         packet = HandshakePacket.fromRaw(buf);
         break;
+      case types.PING:
+        packet = PingPacket.fromRaw(buf);
+        break;
+      case types.PONG:
+        packet = PongPacket.fromRaw(buf);
+        break;
       case types.GETPEERS:
-        packet = null;
+        packet = GetpeersPacket.fromRaw(buf);
+        break;
+      case types.SENDPEERS:
+        packet = SendpeersPacket.fromRaw(buf);
         break;
     }
 
