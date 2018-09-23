@@ -41,7 +41,7 @@ export function writeData(src: Buffer): Buffer {
 
 export function writeUInt32(n: number): Buffer {
   const dest = Buffer.alloc(4);
-  dest.writeUInt32BE(this.port, 0);
+  dest.writeUInt32BE(n, 0);
   return dest;
 }
 

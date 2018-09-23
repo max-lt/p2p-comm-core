@@ -2,16 +2,23 @@ import { Pool } from './core/pool';
 import { randomBytes } from 'crypto';
 import { TCPTransport, TCPServer } from './transport/tcp';
 
+Buffer.prototype.toJSON = function () {
+  return this.toString();
+};
+
+const env = process.env;
+
 const seed = process.argv.slice(2).map(e => parseInt(e));
 
-console.log({ seed });
+const nodeId = randomBytes(16).toString('hex');
 
-const pool = new Pool({ seed }, TCPTransport.connect, TCPServer.create);
+console.log({ seed, nodeId });
+const pool = new Pool({ seed, nodeId }, TCPTransport.connect, TCPServer.create);
 
-pool.listen(parseInt(process.env.PORT) || undefined);
+pool.listen(parseInt(env.PORT) || undefined);
 
-pool.on('message', (m) => {
-  process.stdout.write('> ' + m);
+pool.on('message', (m, p) => {
+  process.stdout.write(p.id + ' > ' + m);
 });
 
 process.stdin.resume();
@@ -24,7 +31,7 @@ process.stdin.on('data', function (data) {
     case 'bourre!\n':
       let i = 100;
       while (i--) {
-        pool.sendMessage(i + ' ' + randomBytes(64).toString('base64') + '\n');
+        pool.sendMessage(i + ' ' + randomBytes(16).toString('base64') + '\n');
       }
       return;
   }

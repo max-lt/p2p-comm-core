@@ -3,21 +3,20 @@ import { format } from 'util';
 import * as assert from 'assert';
 
 import { SimpleLogger, Logger } from './logger';
-import { Timer } from './timer';
+import { Timer } from './util/timer';
 import { BufferParser } from './parser/parser';
 import { HandshakePacket, types as PACKET, DataPacket, Packet } from './parser/packets';
 import { AbstractTransport } from '../transport/transport';
 
 export interface Peer<T> {
+
+  id: string;
   port: number;
 
   outbound: boolean;
   connected: boolean;
   destroyed: boolean;
   handshaked: boolean;
-
-  // Defines either handshake is mandatory or not
-  handshake: boolean;
 
   on(event: 'connect', listener: () => void): this;
   on(event: 'handshake', listener: (arg: void) => void): this;
@@ -32,6 +31,10 @@ export interface Peer<T> {
   once(event: 'error', listener: (err: Error) => void): void;
 
   destroy();
+
+  connect();
+
+  handshake(port: number, nodeId: string);
 
   write(data: Buffer);
 
@@ -55,23 +58,19 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
   destroyed = false;
   handshaked = false;
 
-  // Defines either handshake is mandatory or not
-  handshake: boolean;
-
   version = -1;
 
+  id: string;
   port: number;
   host: string;
-  peerId: string;
   filter: Set<string>;
 
   connectTimeout: Timer;
   handshakeTimeout: Timer;
 
-  constructor({ port, filter, handshake = true }, private TransportFactory: (port: number) => T) {
+  constructor({ port, filter }, private TransportFactory: (port: number) => T) {
     super();
     this.port = port;
-    this.handshake = handshake;
     this.connectTimeout = new Timer(2000);
     this.handshakeTimeout = new Timer(2000);
     this.logger = new SimpleLogger('peer:' + SimplePeer.counter++);
@@ -86,10 +85,10 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
     return peer;
   }
 
-  static fromOutbound(options, publicPort, Transport) {
-    const peer = new this(options, Transport);
-    peer.connect(options.port, publicPort);
-    return peer;
+  static fromOutbound(options, Transport) {
+    return new this(options, Transport);
+    // peer.connect(options.port);
+    // return peer;
   }
 
   /**
@@ -99,19 +98,14 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
     this.connected = true;
     this.outbound = false;
     this.bind(transport);
-
-    if (this.handshake) {
-      this.handshakeTimeout.start(() => {
-        this.logger.warn('Peer did not handshaked');
-        this.destroy();
-      });
-    }
+    this.expectHandshake();
   }
 
   /**
    * Create an outbound transport.
    */
-  private async connect(port: number, publicPort): Promise<void> {
+  async connect(): Promise<void> {
+    const port = this.port;
     const transport = this.TransportFactory(port);
     this.logger.debug('Connecting to', port);
     this.outbound = true;
@@ -127,18 +121,33 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
 
     if (error) {
       this.logger.debug('Failed to connect to', port);
-      this.error(error);
       this.destroy();
-      return;
+      throw error;
     }
 
+    this.port = port;
     this.connected = true;
     this.bind(transport);
-    this.logger.log('Peer connect', this.connected, error);
+    this.logger.log('EMIT CONNECT');
     this.emit('connect');
+  }
 
-    this.logger.log('handshaking with', port, publicPort);
-    this.send(HandshakePacket.fromObject({ port: publicPort }));
+  handshake(publicPort, nodeId) {
+    this.logger.log(`handshaking: ${publicPort} -> ${this.port}`);
+    const p = HandshakePacket.fromObject({ port: publicPort, peerId: nodeId });
+    this.send(p);
+
+    //
+    if (this.outbound) {
+      this.expectHandshake();
+    }
+  }
+
+  expectHandshake() {
+    this.handshakeTimeout.start(() => {
+      this.logger.warn(`${this.outbound ? 'Outbound' : 'Inbound'} peer did not handshaked`);
+      this.destroy();
+    });
   }
 
   private init() {
@@ -188,27 +197,33 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
     }
 
     // this.logger.debug('m?=', packet.packetId, this.filter.has(packet.packetId));
+    // this.logger.debug('m?=', this.id);
 
     if (this.filter && this.filter.has(packet.packetId)) {
       return;
     }
 
     this.filter.add(packet.packetId);
+    // const peerId = this.peerId || '???';
+    // this.logger.debug(`H<${peerId}>`, JSON.stringify(packet.toJSON(), null, 2));
 
     switch (packet.type) {
       case PACKET.HANDSHAKE:
-        this.peerId = packet.peerId;
+        if (this.outbound && packet.port !== this.port) {
+          this.error(`Outbound peer gave a different port: expected ${this.port} got ${packet.port}`);
+        }
+        this.id = packet.peerId;
         this.host = packet.host;
         this.port = packet.port;
         this.handshaked = true;
         this.handshakeTimeout.clear();
-        this.emit('handshake');
+        this.emit('handshake', this.outbound);
         return;
       case PACKET.DATA:
         break;
     }
 
-    if (!this.outbound && this.handshake && !this.handshaked) {
+    if (!this.handshaked) {
       return;
     }
 
@@ -224,7 +239,9 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
   }
 
   destroy() {
+    this.logger.debug('destroying');
     if (this.destroyed) {
+      this.logger.debug('already destroyed!');
       return;
     }
 

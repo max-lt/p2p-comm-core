@@ -1,11 +1,10 @@
-import * as crypto from 'crypto';
-
 import { PacketTypes, metaLength, types, readData, writeData, writeUInt32 } from './util';
 import { IAbstractPacket, OAbstractPacket, AbstractPacket } from './abstract';
 
 export interface IHandshakePacket extends IAbstractPacket {
   port: number;
   host?: string;
+  peerId: string;
 }
 export interface OHandshakePacket extends OAbstractPacket {
   type: PacketTypes['HANDSHAKE'];
@@ -33,7 +32,7 @@ export class HandshakePacket extends AbstractPacket implements OHandshakePacket 
     this.port = buf.readUInt32BE(metaLength);
     const [host, hostOffset] = readData(buf, metaLength + 4);
     this.host = host.toString();
-    const [peerId, peerIdOffset] = readData(buf, hostOffset);
+    const [peerId] = readData(buf, hostOffset);
     this.peerId = peerId.toString('hex');
     return this;
   }
@@ -42,7 +41,7 @@ export class HandshakePacket extends AbstractPacket implements OHandshakePacket 
     super.fromOptions({});
     this.port = opts.port;
     this.host = opts.host || 'localhost';
-    this.peerId = crypto.randomBytes(16).toString('hex');
+    this.peerId = opts.peerId;
     return this;
   }
 

@@ -1,5 +1,4 @@
 import { EventEmitter } from 'events';
-import * as assert from 'assert';
 
 import { Logger, SimpleLogger } from '../logger';
 import { decodeRawMeta, metaLength, types } from './packets/util';
