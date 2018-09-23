@@ -47,7 +47,7 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
   private static counter = 0;
 
   logger: Logger;
-  tranbsport: T;
+  transport: T;
   parser: BufferParser;
 
   outbound = false;
@@ -61,6 +61,8 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
   version = -1;
 
   port: number;
+  host: string;
+  peerId: string;
   filter: Set<string>;
 
   connectTimeout: Timer;
@@ -157,26 +159,26 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
   }
 
   private bind(transport: T) {
-    assert(!this.tranbsport, 'already bound');
-    this.tranbsport = transport;
+    assert(!this.transport, 'already bound');
+    this.transport = transport;
 
-    this.tranbsport.on('error', (err: Error) => {
+    this.transport.on('error', (err: Error) => {
       this.logger.error('Peer error', err);
       this.error(err);
       this.destroy();
     });
 
-    this.tranbsport.on('data', (data: Buffer) => {
+    this.transport.on('data', (data: Buffer) => {
       this.feedParser(data);
     });
 
-    this.tranbsport.once('close', () => {
+    this.transport.once('close', () => {
       console.log('transport close');
       this.destroy();
     });
   }
 
-  private feedParser(data) {
+  private feedParser(data: Buffer) {
     return this.parser.feed(data);
   }
 
@@ -185,16 +187,18 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
       throw new Error('Destroyed peer sent a packet.');
     }
 
-    this.logger.debug('m?=', packet.uuid, this.filter.has(packet.uuid));
+    // this.logger.debug('m?=', packet.packetId, this.filter.has(packet.packetId));
 
-    if (this.filter && this.filter.has(packet.uuid)) {
+    if (this.filter && this.filter.has(packet.packetId)) {
       return;
     }
 
-    this.filter.add(packet.uuid);
+    this.filter.add(packet.packetId);
 
     switch (packet.type) {
       case PACKET.HANDSHAKE:
+        this.peerId = packet.peerId;
+        this.host = packet.host;
         this.port = packet.port;
         this.handshaked = true;
         this.handshakeTimeout.clear();
@@ -230,7 +234,7 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
     this.emit('close', this.connected);
 
     if (this.connected) {
-      this.tranbsport.destroy();
+      this.transport.destroy();
     }
 
     this.destroyed = true;
@@ -238,12 +242,12 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
   }
 
   write(data: Buffer) {
-    this.tranbsport.write(data);
+    this.transport.write(data);
   }
 
   send(packet: Packet) {
-    this.logger.debug('m+=', packet.uuid, this.filter.has(packet.uuid));
-    this.filter.add(packet.uuid);
+    // this.logger.debug('m+=', packet.packetId, this.filter.has(packet.packetId));
+    this.filter.add(packet.packetId);
     this.write(this.parser.encode(packet));
   }
 

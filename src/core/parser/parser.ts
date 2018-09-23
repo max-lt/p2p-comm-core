@@ -10,11 +10,13 @@ import { Packet } from './packets';
 const EMPTY = Buffer.alloc(0);
 
 let safe = 20000;
-let lock = false;
+
+const acceptedTypes = Object.values(types);
 
 export class BufferParser extends EventEmitter /* implements Parser */ {
 
   logger: Logger;
+  lock = false;
   buf: Buffer;
 
   constructor() {
@@ -25,11 +27,12 @@ export class BufferParser extends EventEmitter /* implements Parser */ {
 
   feed(data: Buffer): void {
 
-    if (lock) {
+    if (this.lock) {
+      this.logger.warn('locked');
       return;
     }
 
-    lock = true;
+    this.lock = true;
 
     let buf = Buffer.concat([this.buf, data]);
 
@@ -43,6 +46,9 @@ export class BufferParser extends EventEmitter /* implements Parser */ {
       const meta = decodeRawMeta(buf);
 
       // this.logger.log('meta', meta && meta.size + metaLength, buf.length);
+      if (!acceptedTypes.includes(meta.type)) {
+        throw new Error('Invalid types');
+      }
 
       if (meta.size + metaLength > buf.length) {
         break;
@@ -70,7 +76,7 @@ export class BufferParser extends EventEmitter /* implements Parser */ {
     }
 
     this.buf = Buffer.concat([buf]);
-    lock = false;
+    this.lock = false;
   }
 
   decode(buf: Buffer): Packet {
