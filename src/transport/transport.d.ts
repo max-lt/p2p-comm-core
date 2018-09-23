@@ -13,7 +13,7 @@ export interface Protocol {
  * socket
  */
 export abstract class AbstractTransport {
-  static connect(): AbstractTransport;
+  static connect(port: number): AbstractTransport;
 
   abstract write(data: Buffer);
 

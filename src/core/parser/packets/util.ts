@@ -14,7 +14,7 @@ export const metaLengths = {
   TYPE: 1,
   LEN: 4,
   DATE: 8,
-  PACKET_ID: 16
+  PACKET_ID: 8
 };
 
 export const metaLength = metaLengths.TYPE + metaLengths.LEN + metaLengths.DATE + metaLengths.PACKET_ID;
