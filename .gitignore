@@ -27,3 +27,6 @@ Thumbs.db
 *.tar
 *.tgz
 /tmp
+
+*.d.ts
+*.js

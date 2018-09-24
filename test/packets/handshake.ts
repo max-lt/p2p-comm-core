@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 
-import { HandshakePacket } from '../../src/core/parser/packets';
+import { HandshakePacket } from '../../src/core/packets';
 
 describe('packets.handshake tests', () => {
   const packet = HandshakePacket.fromObject({ port: 80, peerId: '1234' });

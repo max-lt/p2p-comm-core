@@ -1,15 +1,14 @@
 {
   "compilerOptions": {
     "baseUrl": ".",
-    "allowJs": true,
-    "outDir": "./dist",
     "target": "es2017",
     "module": "commonjs",
     "moduleResolution": "node",
     "typeRoots": [
       "node_modules/@types",
       "./src/types/**/*"
-    ]
+    ],
+    "declaration": true
   },
   "include": [
     "src/**/*.ts",

@@ -1,15 +1,18 @@
-import { PacketTypes, metaLength, types } from './util';
-import { IAbstractPacket, OAbstractPacket, AbstractPacket } from './abstract';
+import { metaLength } from '@p2p-comm/base/src/packets/util';
+import { IAbstractPacket, OAbstractPacket, AbstractPacket } from '@p2p-comm/base/src';
+import { PacketTypesI, types } from './types';
+
 
 export interface IDataPacket extends IAbstractPacket {
   data: Buffer;
 }
 export interface ODataPacket extends OAbstractPacket {
-  type: PacketTypes['DATA'];
+  type: PacketTypesI['DATA'];
   data: Buffer;
 }
 export class DataPacket extends AbstractPacket implements ODataPacket {
 
+  static type = types.DATA;
   public type = types.DATA;
   public data: Buffer;
 

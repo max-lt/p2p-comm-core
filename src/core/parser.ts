@@ -1,27 +1,28 @@
 import { EventEmitter } from 'events';
 
-import { Logger, SimpleLogger } from '../logger';
-import { decodeRawMeta, metaLength, types } from './packets/util';
-import { DataPacket, PingPacket, PongPacket, GetpeersPacket, SendpeersPacket } from './packets';
-import { HandshakePacket } from './packets';
-import { Packet } from './packets';
+import { Logger, SimpleLogger } from './logger';
+import { decodeRawMeta, metaLength } from '@p2p-comm/base/src/packets/util';
+import { AbstractPacket } from '@p2p-comm/base/src/packets/abstract';
 
 const EMPTY = Buffer.alloc(0);
 
 let safe = 20000;
 
-const acceptedTypes = Object.values(types);
-
 export class BufferParser extends EventEmitter /* implements Parser */ {
 
+  acceptedTypes: number[];
+  packets: Map<number, typeof AbstractPacket>;
   logger: Logger;
   lock = false;
   buf: Buffer;
 
-  constructor() {
+  constructor(modules: Array<typeof AbstractPacket>) {
     super();
     this.buf = EMPTY;
+    this.packets = [].concat.apply([], modules).reduce((acc, e) => (acc.set(e.type, e), acc), new Map);
+    this.acceptedTypes = Array.from(this.packets.keys());
     this.logger = new SimpleLogger('parser');
+    this.logger.debug({ p: this.packets });
   }
 
   feed(data: Buffer): void {
@@ -35,7 +36,7 @@ export class BufferParser extends EventEmitter /* implements Parser */ {
 
     let buf = Buffer.concat([this.buf, data]);
 
-    let packet: Packet = null;
+    let packet: AbstractPacket = null;
 
     while (buf.length >= metaLength) {
       if (safe < 0) {
@@ -45,7 +46,8 @@ export class BufferParser extends EventEmitter /* implements Parser */ {
       const meta = decodeRawMeta(buf);
 
       // this.logger.log('meta', meta && meta.size + metaLength, buf.length);
-      if (!acceptedTypes.includes(meta.type)) {
+      this.logger.log('meta', meta && meta.type, this.acceptedTypes);
+      if (!this.acceptedTypes.includes(meta.type)) {
         throw new Error('Invalid types');
       }
 
@@ -78,9 +80,9 @@ export class BufferParser extends EventEmitter /* implements Parser */ {
     this.lock = false;
   }
 
-  decode(buf: Buffer): Packet {
+  decode(buf: Buffer): AbstractPacket {
     const offset = 0;
-    let packet: Packet = null;
+    let packet: AbstractPacket = null;
 
     // while (MIN_SIZE + offset < buf.length && Buffer.compare(MAGIC, buf.slice(offset, MAGIC.length + offset)) !== 0) {
     //   offset++;
@@ -97,26 +99,13 @@ export class BufferParser extends EventEmitter /* implements Parser */ {
 
     // const raw = buf.slice(offset, stop + END.length);
 
-    switch (type) {
-      case types.DATA:
-        packet = DataPacket.fromRaw(buf);
-        break;
-      case types.HANDSHAKE:
-        packet = HandshakePacket.fromRaw(buf);
-        break;
-      case types.PING:
-        packet = PingPacket.fromRaw(buf);
-        break;
-      case types.PONG:
-        packet = PongPacket.fromRaw(buf);
-        break;
-      case types.GETPEERS:
-        packet = GetpeersPacket.fromRaw(buf);
-        break;
-      case types.SENDPEERS:
-        packet = SendpeersPacket.fromRaw(buf);
-        break;
+    const PacketClass: typeof AbstractPacket = this.packets.get(type);
+
+    if (!PacketClass) {
+      throw new Error(`Undlandled packet type ${type}`);
     }
+
+    packet = PacketClass.fromRaw(buf);
 
     if (!packet) {
       return;

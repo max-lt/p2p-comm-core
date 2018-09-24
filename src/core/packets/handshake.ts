@@ -1,5 +1,6 @@
-import { PacketTypes, metaLength, types, readData, writeData, writeUInt32, encodePeer, decodePeer } from './util';
-import { IAbstractPacket, OAbstractPacket, AbstractPacket } from './abstract';
+import { metaLength, encodePeer, decodePeer } from '@p2p-comm/base/src/packets/util';
+import { IAbstractPacket, OAbstractPacket, AbstractPacket } from '@p2p-comm/base/src';
+import { PacketTypesI, types } from './types';
 
 export interface IHandshakePacket extends IAbstractPacket {
   port: number;
@@ -7,13 +8,14 @@ export interface IHandshakePacket extends IAbstractPacket {
   peerId: string;
 }
 export interface OHandshakePacket extends OAbstractPacket {
-  type: PacketTypes['HANDSHAKE'];
+  type: PacketTypesI['HANDSHAKE'];
   port: number;
   host: string;
   peerId: string;
 }
 export class HandshakePacket extends AbstractPacket implements OHandshakePacket {
 
+  static type = types.HANDSHAKE;
   public type = types.HANDSHAKE;
   public port: number;
   public host: string;

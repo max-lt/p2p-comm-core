@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { randomBytes } from 'crypto';
 
-import { DataPacket } from '../../src/core/parser/packets';
+import { DataPacket } from '../../src/core/packets';
 
 describe('packets.data tests', () => {
   const packet = DataPacket.fromObject({ data: randomBytes(64) });

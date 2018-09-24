@@ -4,10 +4,13 @@ import * as assert from 'assert';
 
 import { SimpleLogger, Logger } from './logger';
 import { Timer } from './util/timer';
-import { BufferParser } from './parser/parser';
-import { HandshakePacket, types as PACKET, Packet, PingPacket, PongPacket } from './parser/packets';
+import { BufferParser } from './parser';
+import { HandshakePacket } from './packets';
+import { types } from './packets/types';
 import { AbstractTransport } from '../transport/transport';
-import { wait } from './util/wait';
+
+import { Packet } from '.';
+import { Module } from '@p2p-comm/base/src';
 
 export interface Peer<T> {
 
@@ -45,7 +48,7 @@ export interface Peer<T> {
 }
 
 
-export class SimplePeer<T extends AbstractTransport> extends EventEmitter implements Peer<T> {
+export class SimplePeer<T extends AbstractTransport, P> extends EventEmitter implements Peer<T> {
 
   // debug
   private static counter = 0;
@@ -72,7 +75,7 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
   pingTimeout: Timer;
   pongTimeout: Timer;
 
-  constructor({ port, filter }) {
+  constructor({ port, filter }, mod: Module) {
     super();
     this.port = port;
 
@@ -80,21 +83,21 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
     this.handshakeTimeout = new Timer(5 * 1000);
     this.logger = new SimpleLogger('peer:' + SimplePeer.counter++);
     this.filter = filter;
-    this.parser = new BufferParser();
+    this.parser = new BufferParser(mod.packets);
     this.init();
 
     this.pingTimeout = new Timer(60 * 1000);
     this.pongTimeout = new Timer(10 * 1000);
   }
 
-  static fromInbound(options, transport) {
-    const peer = new this(options);
+  static fromInbound(options, transport, mod) {
+    const peer = new this(options, mod);
     peer.accept(transport);
     return peer;
   }
 
-  static fromOutbound(options) {
-    return new this(options);
+  static fromOutbound(options, mod) {
+    return new this(options, mod);
   }
 
   /**
@@ -217,7 +220,7 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
     this.filter.add(packet.packetId);
 
     switch (packet.type) {
-      case PACKET.HANDSHAKE:
+      case types.HANDSHAKE:
         if (this.outbound && packet.port !== this.port) {
           this.error(`Outbound peer gave a different port: expected ${this.port} got ${packet.port}`);
         }
@@ -228,16 +231,17 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
         this.handshakeTimeout.clear();
         this.emit('handshake', this.outbound);
         return;
-      case PACKET.PONG:
-        this.pongTimeout.clear();
-        break;
-      case PACKET.PING:
-        await wait(Math.random() * 3 * 1000);
-        this.send(PongPacket.fromObject());
-        break;
-      case PACKET.DATA:
+      case types.DATA:
         // await wait(Math.random() * 3 * 1000);
         break;
+      // TODO:
+      // case PACKET.PONG:
+      //   this.pongTimeout.clear();
+      //   break;
+      // case PACKET.PING:
+      //   await wait(Math.random() * 3 * 1000);
+      //   this.send(PongPacket.fromObject());
+      //   break;
     }
 
     if (!this.handshaked) {
@@ -256,13 +260,15 @@ export class SimplePeer<T extends AbstractTransport> extends EventEmitter implem
   }
 
   activate() {
-    this.pingTimeout.start(() => this.ping());
+    // TODO:
+    // this.pingTimeout.start(() => this.ping());
   }
 
-  ping() {
-    this.send(PingPacket.fromObject());
-    this.expectPong();
-  }
+  // TODO:
+  // ping() {
+  //   this.send(PingPacket.fromObject());
+  //   this.expectPong();
+  // }
 
   destroy() {
     this.logger.debug('destroying');

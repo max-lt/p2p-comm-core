@@ -1,10 +1,13 @@
 import { EventEmitter } from 'events';
 import { SimplePeer, Peer } from './peer';
 import { Logger, SimpleLogger } from './logger';
-import { types as PACKET, DataPacket, Packet } from './parser/packets/';
+import { DataPacket } from './packets';
+import { types } from './packets/types';
 
 import { AbstractServer, AbstractTransport } from '../transport/transport';
 import { wait } from './util/wait';
+import { Module } from '@p2p-comm/base/src';
+import { Packet } from '.';
 
 export class Pool<T extends AbstractTransport> extends EventEmitter {
 
@@ -25,12 +28,15 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
   maxInbound = 8;
   maxOutbound = 8;
 
+  mod: Module;
+
   createTransport: (port: number) => AbstractTransport;
 
   constructor(
     opts: { seed: number[], nodeId },
     Transport: typeof AbstractTransport,
-    Server: typeof AbstractServer
+    Server: typeof AbstractServer,
+    mod: Module
   ) {
     super();
     this.port = 0;
@@ -42,6 +48,7 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
     this.seeds = opts && opts.seed || [];
     this.nodeId = opts.nodeId;
 
+    this.mod = mod;
     this.createTransport = Transport.connect;
 
     this.logger.info('Created pool');
@@ -72,7 +79,7 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
 
   addInbound(transport: T) {
     const opts = { filter: this.filter, handshake: this.handshake };
-    const peer: Peer<T> = SimplePeer.fromInbound(opts, transport);
+    const peer: Peer<T> = SimplePeer.fromInbound(opts, transport, this.mod);
     this.bindPeer(peer);
   }
 
@@ -91,7 +98,7 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
     let i = 4;
     while (i--) {
       await wait(1000);
-      const peer = SimplePeer.fromOutbound(opts);
+      const peer = SimplePeer.fromOutbound(opts, this.mod);
       this.logger.log('Outbound peer', peer.port);
       this.bindPeer(peer);
       try {
@@ -140,9 +147,9 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
 
   private handlePacket(peer: Peer<T>, packet: Packet) {
     switch (packet.type) {
-      case PACKET.HANDSHAKE:
+      case types.HANDSHAKE:
         return;
-      case PACKET.DATA:
+      case types.DATA:
         this.broadcast(packet);
         this.emit('data', packet.data);
         return;
@@ -154,7 +161,7 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
   }
 
   private broadcast(packet: Packet) {
-    this.logger.debug('m ->', packet.packetId, this.filter.has(packet.packetId));
+    this.logger.debug('m >>', packet.getTypeName(), packet.packetId, this.filter.has(packet.packetId));
     this.filter.add(packet.packetId);
     this.peers.broadcast(packet.toRaw());
   }
