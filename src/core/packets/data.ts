@@ -1,16 +1,15 @@
-import { metaLength } from '@p2p-comm/base/src/packets/util';
-import { IAbstractPacket, OAbstractPacket, AbstractPacket } from '@p2p-comm/base/src';
+import { IBasePacket, OBasePacket, BasePacket, MetaInterface, util } from '@p2p-comm/base';
 import { PacketTypesI, types } from './types';
 
 
-export interface IDataPacket extends IAbstractPacket {
+export interface IDataPacket extends IBasePacket {
   data: Buffer;
 }
-export interface ODataPacket extends OAbstractPacket {
+export interface ODataPacket extends OBasePacket {
   type: PacketTypesI['DATA'];
   data: Buffer;
 }
-export class DataPacket extends AbstractPacket implements ODataPacket {
+export class DataPacket extends BasePacket<IDataPacket, ODataPacket> implements ODataPacket {
 
   static type = types.DATA;
   public type = types.DATA;
@@ -24,10 +23,10 @@ export class DataPacket extends AbstractPacket implements ODataPacket {
     return (new this()).fromRaw(buf);
   }
 
-  protected fromRaw(buf: Buffer): DataPacket {
+  protected fromRaw(buf: Buffer) {
     super.fromRaw(buf);
-    const packetLen = buf.readUInt32BE(metaLength);
-    const offset = metaLength + 4;
+    const packetLen = buf.readUInt32BE(util.metaLength);
+    const offset = util.metaLength + 4;
     this.data = buf.slice(offset, offset + packetLen);
     return this;
   }
@@ -39,7 +38,7 @@ export class DataPacket extends AbstractPacket implements ODataPacket {
     return this;
   }
 
-  toJSON(): ODataPacket {
+  toJSON(): ODataPacket & MetaInterface {
     return Object.assign(this.getMeta(), { data: this.data, type: this.type });
   }
 

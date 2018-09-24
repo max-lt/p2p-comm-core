@@ -2,11 +2,12 @@ import { EventEmitter } from 'events';
 import { SimplePeer, Peer } from './peer';
 import { Logger, SimpleLogger } from './logger';
 import { DataPacket } from './packets';
-import { types } from './packets/types';
 
 import { AbstractServer, AbstractTransport } from '../transport/transport';
 import { wait } from './util/wait';
-import { Module } from '@p2p-comm/base/src';
+import { Module } from '@p2p-comm/base';
+
+// TODO: ??
 import { Packet } from '.';
 
 export class Pool<T extends AbstractTransport> extends EventEmitter {
@@ -141,19 +142,8 @@ export class Pool<T extends AbstractTransport> extends EventEmitter {
     });
 
     peer.on('packet', (packet) => {
-      this.handlePacket(peer, packet);
+      this.mod.pool.handlePacket.call(this, packet);
     });
-  }
-
-  private handlePacket(peer: Peer<T>, packet: Packet) {
-    switch (packet.type) {
-      case types.HANDSHAKE:
-        return;
-      case types.DATA:
-        this.broadcast(packet);
-        this.emit('data', packet.data);
-        return;
-    }
   }
 
   listen(port?: number) {

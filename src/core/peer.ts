@@ -6,11 +6,12 @@ import { SimpleLogger, Logger } from './logger';
 import { Timer } from './util/timer';
 import { BufferParser } from './parser';
 import { HandshakePacket } from './packets';
-import { types } from './packets/types';
 import { AbstractTransport } from '../transport/transport';
 
+import { Module } from '@p2p-comm/base';
+
+// TODO: ??
 import { Packet } from '.';
-import { Module } from '@p2p-comm/base/src';
 
 export interface Peer<T> {
 
@@ -75,7 +76,7 @@ export class SimplePeer<T extends AbstractTransport, P> extends EventEmitter imp
   pingTimeout: Timer;
   pongTimeout: Timer;
 
-  constructor({ port, filter }, mod: Module) {
+  constructor({ port, filter }, private mod: Module) {
     super();
     this.port = port;
 
@@ -143,7 +144,6 @@ export class SimplePeer<T extends AbstractTransport, P> extends EventEmitter imp
   handshake(publicPort, nodeId) {
     this.logger.log(`handshaking: ${publicPort} -> ${this.port}`);
     this.send(HandshakePacket.fromObject({ port: publicPort, peerId: nodeId }));
-
     if (this.outbound) {
       this.expectHandshake();
     }
@@ -167,7 +167,7 @@ export class SimplePeer<T extends AbstractTransport, P> extends EventEmitter imp
 
     this.parser.on('packet', (packet) => {
       try {
-        this.handlePacket(packet);
+        this.mod.peer.handlePacket.call(this, packet);
       } catch (e) {
         this.error(e);
         this.destroy();
@@ -202,53 +202,6 @@ export class SimplePeer<T extends AbstractTransport, P> extends EventEmitter imp
 
   private feedParser(data: Buffer) {
     return this.parser.feed(data);
-  }
-
-  private async handlePacket(packet: Packet) {
-    if (this.destroyed) {
-      throw new Error('Destroyed peer sent a packet.');
-    }
-
-    this.pingTimeout.reset();
-
-    this.logger.debug('m <-', packet.getTypeName(), packet.packetId, this.filter.has(packet.packetId));
-
-    if (this.filter && this.filter.has(packet.packetId)) {
-      return;
-    }
-
-    this.filter.add(packet.packetId);
-
-    switch (packet.type) {
-      case types.HANDSHAKE:
-        if (this.outbound && packet.port !== this.port) {
-          this.error(`Outbound peer gave a different port: expected ${this.port} got ${packet.port}`);
-        }
-        this.id = packet.peerId;
-        this.host = packet.host;
-        this.port = packet.port;
-        this.handshaked = true;
-        this.handshakeTimeout.clear();
-        this.emit('handshake', this.outbound);
-        return;
-      case types.DATA:
-        // await wait(Math.random() * 3 * 1000);
-        break;
-      // TODO:
-      // case PACKET.PONG:
-      //   this.pongTimeout.clear();
-      //   break;
-      // case PACKET.PING:
-      //   await wait(Math.random() * 3 * 1000);
-      //   this.send(PongPacket.fromObject());
-      //   break;
-    }
-
-    if (!this.handshaked) {
-      return;
-    }
-
-    this.emit('packet', packet);
   }
 
   private error(err: Error | string) {

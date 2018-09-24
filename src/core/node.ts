@@ -4,8 +4,8 @@ import { randomBytes } from 'crypto';
 import { EventEmitter } from 'events';
 import { AbstractTransport, AbstractServer } from '../transport/transport';
 
+import { Module } from '@p2p-comm/base';
 import coreModule from './module';
-import { Module } from '@p2p-comm/base/src';
 
 // TODO:;
 function mergeModules(mods: Module[]): Module {

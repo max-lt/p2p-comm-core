@@ -1,8 +1,8 @@
 {
   "name": "@p2p-comm/core",
-  "version": "1.0.0",
-  "description": "p2p-comm",
-  "main": "index.js",
+  "version": "1.0.1",
+  "description": "p2p-comm core",
+  "main": "src/",
   "directories": {
     "test": "test"
   },
@@ -16,6 +16,7 @@
     "test:debug": "DEBUG=p2p-comm* npm test",
     "test:ts": "npx mocha -r ts-node/register test/**/*.ts --timeout 60000 --exit",
     "test:ts:debug": "DEBUG=p2p-comm* npm test:ts",
+    "clean": "git clean -fX",
     "prepack": "npm run build"
   },
   "author": "",
