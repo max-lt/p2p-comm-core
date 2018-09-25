@@ -1,15 +1,16 @@
-import { IBasePacket, OBasePacket, BasePacket, MetaInterface, util } from '@p2p-comm/base';
+import { IBasePacketI, OBasePacketI, BasePacket, PacketMetaI, util } from '@p2p-comm/base';
 import { PacketTypesI, types } from './types';
+import { AbstractPacket } from '@p2p-comm/base/src/packets/abstract';
 
 
-export interface IDataPacket extends IBasePacket {
+export interface IDataPacket extends IBasePacketI {
   data: Buffer;
 }
-export interface ODataPacket extends OBasePacket {
+export interface ODataPacket extends OBasePacketI {
   type: PacketTypesI['DATA'];
   data: Buffer;
 }
-export class DataPacket extends BasePacket<IDataPacket, ODataPacket> implements ODataPacket {
+export class DataPacket extends AbstractPacket implements ODataPacket {
 
   static type = types.DATA;
   public type = types.DATA;
@@ -38,7 +39,7 @@ export class DataPacket extends BasePacket<IDataPacket, ODataPacket> implements 
     return this;
   }
 
-  toJSON(): ODataPacket & MetaInterface {
+  toJSON(): ODataPacket & PacketMetaI {
     return Object.assign(this.getMeta(), { data: this.data, type: this.type });
   }
 
@@ -54,6 +55,10 @@ export class DataPacket extends BasePacket<IDataPacket, ODataPacket> implements 
 
   getSize() {
     return this.data.length + 4;
+  }
+
+  getTypeName() {
+    return 'DATA';
   }
 }
 

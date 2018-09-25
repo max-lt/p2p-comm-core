@@ -1,18 +1,19 @@
-import { IBasePacket, OBasePacket, BasePacket, MetaInterface, util} from '@p2p-comm/base';
+import { IBasePacketI, OBasePacketI, BasePacket, PacketMetaI, util} from '@p2p-comm/base';
 import { PacketTypesI, types } from './types';
+import { AbstractPacket } from '@p2p-comm/base/src/packets/abstract';
 
-export interface IHandshakePacket extends IBasePacket {
+export interface IHandshakePacket extends IBasePacketI {
   port: number;
   host?: string;
   peerId: string;
 }
-export interface OHandshakePacket extends OBasePacket {
+export interface OHandshakePacket extends OBasePacketI {
   type: PacketTypesI['HANDSHAKE'];
   port: number;
   host: string;
   peerId: string;
 }
-export class HandshakePacket extends BasePacket<IHandshakePacket, OHandshakePacket> implements OHandshakePacket {
+export class HandshakePacket extends AbstractPacket implements OHandshakePacket {
 
   static type = types.HANDSHAKE;
   public type = types.HANDSHAKE;
@@ -45,7 +46,7 @@ export class HandshakePacket extends BasePacket<IHandshakePacket, OHandshakePack
     return this;
   }
 
-  toJSON(): OHandshakePacket & MetaInterface {
+  toJSON(): OHandshakePacket & PacketMetaI {
     return Object.assign(this.getMeta(), {
       peerId: this.peerId,
       port: this.port,
@@ -62,6 +63,10 @@ export class HandshakePacket extends BasePacket<IHandshakePacket, OHandshakePack
 
   getSize() {
     return 4 + (4 + this.host.length) + (4 + this.peerId.length / 2);
+  }
+
+  getTypeName() {
+    return 'HANDSHAKE';
   }
 
 }

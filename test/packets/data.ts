@@ -1,7 +1,7 @@
 import * as assert from 'assert';
 import { randomBytes } from 'crypto';
 
-import { DataPacket } from '../../src/core/packets';
+import { DataPacket } from '../../src/packets';
 
 describe('packets.data tests', () => {
   const packet = DataPacket.fromObject({ data: randomBytes(64) });
@@ -13,5 +13,9 @@ describe('packets.data tests', () => {
 
   it('should be able to return it\'s raw size', () => {
     assert.equal(packet.toRaw().length, packet.getTotalSize());
+  });
+
+  it('should have static property "type"', () => {
+    assert.notEqual(-1, DataPacket.type);
   });
 });

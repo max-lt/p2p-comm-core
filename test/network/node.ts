@@ -4,7 +4,7 @@ import * as Debug from 'debug';
 
 const debug = Debug('p2p-comm:test:node');
 
-import { P2PNode } from '../../src/core/node';
+import { P2PNode } from '../../src/node';
 import { TCPTransport, TCPServer } from '../../src/transport/tcp';
 import { defer } from '../util';
 

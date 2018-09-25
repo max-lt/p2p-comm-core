@@ -1,16 +1,31 @@
 import { randomBytes } from 'crypto';
-import { P2PNode as Node } from './core/node';
+import { BaseNode, BasePool } from '@p2p-comm/base';
 import { TCPTransport, TCPServer } from './transport/tcp';
+
+import core from './modules/handshake';
 
 Buffer.prototype.toJSON = function () {
   return this.toString();
 };
 
+class CoreNode extends BaseNode<TCPTransport> {
+  // tslint:disable-next-line:no-shadowed-variable
+  constructor({ seed }) {
+    super();
+    this.pool = new BasePool({ seed, nodeId: this.id }, TCPTransport, TCPServer, core);
+
+  }
+
+  send(data) {
+    this.pool.broadcast(data);
+  }
+}
+
 const env = process.env;
 
 const seed = process.argv.slice(2).map(e => parseInt(e));
 
-const node = new Node({ seed }, TCPTransport, TCPServer);
+const node = new CoreNode({ seed });
 
 const name = env.NAME || randomBytes(4).toString('hex');
 
@@ -25,7 +40,7 @@ process.stdin.on('data', function (data: Buffer) {
   let message = data.toString();
   switch (message) {
     case '\n':
-    message = '<empty>\n';
+      message = '<empty>\n';
       break;
     case 'bourre!\n':
       let i = 100;
