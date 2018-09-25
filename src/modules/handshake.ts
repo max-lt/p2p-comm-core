@@ -32,6 +32,8 @@ class PoolHandshakePacketHandler {
       // this.expectHandshake();
     }
 
+    peer.on('packet-handshake', (p: HandshakePacket) => this.parent.emit('packet-handshake', p));
+
     peer.once('connect', () => {
       pool.logger.debug(`Connected to peer ${peer.port}, handshaking with ${pool.port}`);
       this.handshake(peer);
@@ -98,7 +100,7 @@ class PeerHandshakePacketHandler {
         parent.port = packet.port;
         this.handshaked = true;
         this.handshakeTimeout.clear();
-        parent.emit('packet-handshake', parent.outbound);
+        parent.emit('packet-handshake', packet);
         return true;
       default:
         if (!this.handshaked) {

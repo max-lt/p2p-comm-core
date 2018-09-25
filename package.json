@@ -15,7 +15,7 @@
     "test": "npx mocha test/**/*.js --timeout 60000 --exit",
     "test:debug": "DEBUG=p2p-comm* npm test",
     "test:ts": "npx mocha -r ts-node/register test/**/*.ts --timeout 60000 --exit",
-    "test:ts:debug": "DEBUG=p2p-comm* npm test:ts",
+    "test:ts:debug": "DEBUG=p2p-comm* npm run test:ts",
     "clean": "git clean -fX",
     "prepack": "npm run build"
   },
