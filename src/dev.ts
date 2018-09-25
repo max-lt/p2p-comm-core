@@ -1,8 +1,12 @@
 import { randomBytes } from 'crypto';
-import { BaseNode, BasePool } from '@p2p-comm/base';
+import { BaseNode, BasePool, mergeModules } from '@p2p-comm/base';
 import { TCPTransport, TCPServer } from './transport/tcp';
 
-import core from './modules/handshake';
+import handshakeModule from './modules/handshake';
+import dataModule from './modules/data';
+import { DataPacket } from './packets';
+
+const mod = mergeModules([handshakeModule, dataModule]);
 
 Buffer.prototype.toJSON = function () {
   return this.toString();
@@ -12,12 +16,12 @@ class CoreNode extends BaseNode<TCPTransport> {
   // tslint:disable-next-line:no-shadowed-variable
   constructor({ seed }) {
     super();
-    this.pool = new BasePool({ seed, nodeId: this.id }, TCPTransport, TCPServer, core);
-
+    this.pool = new BasePool({ seed, nodeId: this.id }, TCPTransport, TCPServer, mod);
+    this.pool.on('packet-data', (data) => this.emit('data', data));
   }
 
   send(data) {
-    this.pool.broadcast(data);
+    this.pool.broadcast(DataPacket.fromObject({ data }));
   }
 }
 

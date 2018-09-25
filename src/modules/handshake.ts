@@ -13,9 +13,6 @@ class PoolHandshakePacketHandler {
     return (new this(parent));
   }
 
-
-  handlePacket(packet: HandshakePacket, next) { }
-
   private handshake(peer) {
     const pool = this.parent;
     peer.logger.log(`handshaking: ${pool.port} -> ${peer.port}`);
@@ -28,7 +25,7 @@ class PoolHandshakePacketHandler {
     }
   }
 
-  bindPeer(peer: Peer, next) {
+  bindPeer(peer: Peer) {
     const pool = this.parent;
     // Expecting HS from inbound peer first
     if (!peer.outbound) {
@@ -40,7 +37,7 @@ class PoolHandshakePacketHandler {
       this.handshake(peer);
     });
 
-    peer.once('handshake', (outbound) => {
+    peer.once('packet-handshake', (outbound) => {
       pool.logger.debug(`Pool received handshake from ${outbound ? 'outbound' : 'inbound'} peer ${peer.port}`);
       pool.logger.debug(`Peer ${peer.port} will now be known as ${peer.id}`);
       pool.emit('peer', peer);
@@ -76,7 +73,7 @@ class PeerHandshakePacketHandler {
     });
   }
 
-  handlePacket(packet: HandshakePacket, next) {
+  handlePacket(packet: HandshakePacket): boolean {
     const parent = this.parent;
 
     if (parent.destroyed) {
@@ -86,7 +83,7 @@ class PeerHandshakePacketHandler {
     parent.logger.debug('h <-', packet.getTypeName(), packet.packetId, parent.filter.has(packet.packetId));
 
     if (parent.filter && parent.filter.has(packet.packetId)) {
-      return;
+      return true;
     }
 
     parent.filter.add(packet.packetId);
@@ -101,13 +98,13 @@ class PeerHandshakePacketHandler {
         parent.port = packet.port;
         this.handshaked = true;
         this.handshakeTimeout.clear();
-        parent.emit('handshake', parent.outbound);
-        return;
+        parent.emit('packet-handshake', parent.outbound);
+        return true;
       default:
         if (!this.handshaked) {
-          return;
+          return true;
         }
-        return;
+        return false;
     }
   }
 }

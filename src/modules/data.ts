@@ -11,16 +11,19 @@ class PoolDataPacketHandler {
     return (new this(parent));
   }
 
-  handlePacket(packet: DataPacket, next) {
-    switch (packet.type) {
-      case types.DATA:
-        this.parent.broadcast(packet);
-        this.parent.emit('data', packet.data);
-        return;
+  handlePacket(packet: DataPacket) {
+    console.log('poll', packet);
+    if (packet.type === types.DATA) {
+      this.parent.broadcast(packet);
+      this.parent.emit('packet-data', packet.data);
+      return true;
     }
+    return false;
   }
 
-  bindPeer(peer: Peer, next) { }
+  bindPeer(peer: Peer) {
+    peer.on('packet-data', (data) => this.parent.emit('packet-data', data));
+  }
 }
 
 class PeerDataPacketHandler {
@@ -33,7 +36,7 @@ class PeerDataPacketHandler {
     return (new this(parent));
   }
 
-  handlePacket(packet: DataPacket, next) {
+  handlePacket(packet: DataPacket) {
     const parent = this.parent;
 
     if (parent.destroyed) {
@@ -42,14 +45,11 @@ class PeerDataPacketHandler {
 
     parent.logger.debug('d <-', packet.getTypeName(), packet.packetId, parent.filter.has(packet.packetId));
 
-    switch (packet.type) {
-      case types.DATA:
-        break;
-      default:
-        return;
+    if (packet.type === types.DATA) {
+      this.parent.emit('packet-data', packet.data);
+      return true;
     }
-
-    parent.emit('packet', packet);
+    return false;
   }
 }
 
