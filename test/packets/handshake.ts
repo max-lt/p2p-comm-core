@@ -1,6 +1,6 @@
 import * as assert from 'assert';
 
-import { HandshakePacket } from '../../src/core/parser/packets';
+import { HandshakePacket } from '../../src/packets';
 
 describe('packets.handshake tests', () => {
   const packet = HandshakePacket.fromObject({ port: 80, peerId: '1234' });
@@ -12,5 +12,9 @@ describe('packets.handshake tests', () => {
 
   it('should be able to return it\'s raw size', () => {
     assert.equal(packet.toRaw().length, packet.getTotalSize());
+  });
+
+  it('should have static property "type"', () => {
+    assert.notEqual(-1, HandshakePacket.type);
   });
 });

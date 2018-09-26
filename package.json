@@ -1,8 +1,8 @@
 {
-  "name": "p2p-comm",
-  "version": "1.0.0",
-  "description": "p2p-comm",
-  "main": "index.js",
+  "name": "@p2p-comm/core",
+  "version": "1.0.4",
+  "description": "p2p-comm core",
+  "main": "src/",
   "directories": {
     "test": "test"
   },
@@ -11,8 +11,12 @@
     "build": "npx tsc",
     "dev": "DEBUG=p2p-comm* npx ts-node-dev src/dev.ts",
     "start": "node dist/dev",
-    "test": "npx mocha -r ts-node/register test/**/*.ts --timeout 60000 --exit",
+    "pretest": "npm run build",
+    "test": "npx mocha test/**/*.js --timeout 60000 --exit",
     "test:debug": "DEBUG=p2p-comm* npm test",
+    "test:ts": "npx mocha -r ts-node/register test/**/*.ts --timeout 60000 --exit",
+    "test:ts:debug": "DEBUG=p2p-comm* npm run test:ts",
+    "clean": "git clean -fX",
     "prepack": "npm run build"
   },
   "author": "",

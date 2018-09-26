@@ -1,7 +1,7 @@
 import { createServer, Server, Socket } from 'net';
 import * as net from 'net';
-import { AbstractServer, AbstractTransport } from './transport';
 
+import { AbstractServer, AbstractTransport } from '@p2p-comm/base';
 
 export class TCPTransport extends Socket implements AbstractTransport {
 

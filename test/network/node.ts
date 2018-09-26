@@ -4,13 +4,28 @@ import * as Debug from 'debug';
 
 const debug = Debug('p2p-comm:test:node');
 
-import { P2PNode } from '../../src/core/node';
 import { TCPTransport, TCPServer } from '../../src/transport/tcp';
+import { BaseNode, BasePool, mergeModules } from '@p2p-comm/base';
+import { DataPacket, HandshakePacket } from '../../src/packets';
 import { defer } from '../util';
 
+import handshakeModule from '../../src/modules/handshake';
+import dataModule from '../../src/modules/data';
 
-function createNode(seed: number[]): P2PNode<TCPTransport> {
-  return new P2PNode({ seed }, TCPTransport, TCPServer);
+const mod = mergeModules([handshakeModule, dataModule]);
+
+class P2PNode extends BaseNode<TCPTransport> {
+  constructor({ seed }) {
+    super();
+    this.pool = new BasePool({ seed, nodeId: this.id }, TCPTransport, TCPServer, mod);
+    this.pool.on('packet-data', (p: DataPacket) => this.emit('data', p));
+    this.pool.on('packet-handshake', (p: HandshakePacket) => this.emit('handshake', p));
+    this.pool.on('listening', (data) => this.emit('listening', data));
+  }
+}
+
+function createNode(seed: number[]): P2PNode {
+  return new P2PNode({ seed });
 }
 
 async function startNode(node): Promise<AddressInfo | any> {
@@ -30,7 +45,7 @@ describe('node tests', () => {
   const handshakeB = defer<any>();
   const dataReceived = defer<any>();
 
-  const out = Buffer.from('test');
+  const out = DataPacket.fromObject({ data: Buffer.from('test') });
 
   let A, B;
 
@@ -49,28 +64,30 @@ describe('node tests', () => {
 
     const sendData = () => (++lock === 2) && A.send(out);
 
-    A.on('peer', (peer) => {
+    A.on('handshake', (peer) => {
       debug(`B (${B.id}) handshaked A (${A.id})`, peer.id);
       handshakeA.resolve(peer);
       sendData();
     });
 
-    B.on('peer', (peer) => {
+    B.on('handshake', (peer) => {
       debug(`A (${A.id}) handshaked B (${B.id})`, peer.id);
       handshakeB.resolve(peer);
       sendData();
     });
 
     B.on('data', (data) => {
-      debug(`B (${B.id}) received`, data);
+      debug(`B (${B.id}) received`, data, data.toString());
       dataReceived.resolve(data);
     });
   })();
 
-  it('Inbound peer should handshake', () => handshakeA.promise.then((peer) => assert.equal(B.id, peer.id)));
+  it('Inbound peer should handshake', () => handshakeA.promise.then((p: HandshakePacket) => assert.equal(B.id, p.peerId)));
 
-  it('Outbound peer should handshake', () => handshakeB.promise.then((peer) => assert.equal(A.id, peer.id)));
+  it('Outbound peer should handshake', () => handshakeB.promise.then((p: HandshakePacket) => assert.equal(A.id, p.peerId)));
 
-  it('Node sould be able to send/receive data', () => dataReceived.promise.then((data) => assert.equal(out.toString(), data.toString())));
+  it('Node sould be able to send/receive data', () => {
+    return dataReceived.promise.then((p: DataPacket) => assert.equal(out.data.toString(), p.data.toString()));
+  });
 
 });
