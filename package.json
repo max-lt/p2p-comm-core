@@ -1,6 +1,6 @@
 {
   "name": "@p2p-comm/core",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "p2p-comm core",
   "main": "src/",
   "directories": {

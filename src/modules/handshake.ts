@@ -77,19 +77,6 @@ class PeerHandshakePacketHandler {
 
   handlePacket(packet: HandshakePacket): boolean {
     const parent = this.parent;
-
-    if (parent.destroyed) {
-      throw new Error('Destroyed peer sent a packet.');
-    }
-
-    parent.logger.debug('h <-', packet.getTypeName(), packet.packetId, parent.filter.has(packet.packetId));
-
-    if (parent.filter && parent.filter.has(packet.packetId)) {
-      return true;
-    }
-
-    parent.filter.add(packet.packetId);
-
     switch (packet.type) {
       case types.HANDSHAKE:
         if (parent.outbound && packet.port !== parent.port) {

@@ -3,10 +3,11 @@ import { BaseNode, BasePool, mergeModules } from '@p2p-comm/base';
 import { TCPTransport, TCPServer } from './transport/tcp';
 
 import handshakeModule from './modules/handshake';
+import filterModule from './modules/filter';
 import dataModule from './modules/data';
 import { DataPacket } from './packets';
 
-const mod = mergeModules([handshakeModule, dataModule]);
+const mod = mergeModules([filterModule, handshakeModule, dataModule]);
 
 Buffer.prototype.toJSON = function () {
   return this.toString();
@@ -17,7 +18,7 @@ class CoreNode extends BaseNode<TCPTransport> {
   constructor({ seed }) {
     super();
     this.pool = new BasePool({ seed, nodeId: this.id }, TCPTransport, TCPServer, mod);
-    this.pool.on('packet-data', (data) => this.emit('data', data));
+    this.pool.on('packet-data', (p: DataPacket) => this.emit('data', p.data));
   }
 
   send(data) {

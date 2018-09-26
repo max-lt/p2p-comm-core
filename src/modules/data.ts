@@ -12,7 +12,10 @@ class PoolDataPacketHandler {
   }
 
   bindPeer(peer: Peer) {
-    peer.on('packet-data', (data: DataPacket) => this.parent.emit('packet-data', data));
+    peer.on('packet-data', (packet: DataPacket) => {
+      this.parent.emit('packet-data', packet);
+      this.parent.broadcast(packet);
+    });
   }
 }
 
@@ -25,14 +28,6 @@ class PeerDataPacketHandler {
   }
 
   handlePacket(packet: DataPacket) {
-    const parent = this.parent;
-
-    if (parent.destroyed) {
-      throw new Error('Destroyed peer sent a packet.');
-    }
-
-    parent.logger.debug('d <-', packet.getTypeName(), packet.packetId, parent.filter.has(packet.packetId));
-
     if (packet.type === types.DATA) {
       this.parent.emit('packet-data', packet);
       return true;
