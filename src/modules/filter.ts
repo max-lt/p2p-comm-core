@@ -1,6 +1,4 @@
-
-import { Module, Peer, Pool } from '@p2p-comm/base';
-import { DataPacket } from '../packets';
+import { Module, Peer, Pool, AbstractPacket } from '@p2p-comm/base';
 
 class PoolFilter {
 
@@ -23,7 +21,7 @@ class PeerFilter {
     return (new this(parent, ctx));
   }
 
-  handlePacket(packet: DataPacket) {
+  handlePacket(packet: AbstractPacket) {
     const parent = this.parent;
     const filter = this.ctx.filter;
 
@@ -47,7 +45,7 @@ class PeerFilter {
 const mod = Module.create({
   Peer: PeerFilter,
   Pool: PoolFilter,
-  packets: [DataPacket]
+  packets: []
 });
 
 export default mod;

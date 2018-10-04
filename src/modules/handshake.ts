@@ -1,4 +1,3 @@
-
 import { Module, Peer, Pool } from '@p2p-comm/base';
 import { types } from '../packets/types';
 import { HandshakePacket } from '../packets';
@@ -34,6 +33,7 @@ class PoolHandshakePacketHandler {
 
     peer.on('packet-handshake', (p: HandshakePacket) => this.parent.emit('packet-handshake', p));
 
+    // Outbound peer connected
     peer.once('connect', () => {
       pool.logger.debug(`Connected to peer ${peer.port}, handshaking with ${pool.port}`);
       this.handshake(peer);

@@ -1,4 +1,3 @@
-
 import { Module, Peer, Pool } from '@p2p-comm/base';
 import { DataPacket } from '../packets';
 import { types } from '../packets/types';
