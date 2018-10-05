@@ -5,12 +5,28 @@ import { HandshakePacket } from '../packets';
 
 import { Timer } from '@p2p-comm/base/src/util/timer';
 
+const ppphSymbol = Symbol('Peer to PeerHandshakePacketHandler');
+
+interface Context extends Object {
+  [ppphSymbol]: WeakMap<Peer, PeerHandshakePacketHandler>;
+}
+
 class PoolHandshakePacketHandler implements PoolPacketHandler {
 
-  constructor(private parent: Pool, private ctx) { }
+  constructor(private parent: Pool, private ctx: Context) {
 
-  static create(parent: Pool, ctx) {
+    const ppphMap = new WeakMap;
+    ctx[ppphSymbol] = ppphMap;
+  }
+
+  static create(parent: Pool, ctx: Context) {
     return (new this(parent, ctx));
+  }
+
+  expectHandshake(peer: Peer) {
+    peer.logger.log(`starting handshake timeout`);
+    const peerHandler = this.ctx[ppphSymbol].get(peer);
+    peerHandler.expectHandshake();
   }
 
   private handshake(peer) {
@@ -20,27 +36,15 @@ class PoolHandshakePacketHandler implements PoolPacketHandler {
 
     // Expecting HS from outbound peer in return
     if (peer.outbound) {
-      // this.expectHandshake();
-
+      this.expectHandshake(peer);
     }
-  }
-
-  expectHandshake() {
-    /*
-    const parent = this.parent;
-    const peerCtx = this.ctx[this.parent];
-    this.handshakeTimeout.start(() => {
-      parent.logger.warn(`${parent.outbound ? 'Outbound' : 'Inbound'} peer did not handshaked`);
-      parent.destroy();
-    });
-    */
   }
 
   bindPeer(peer: Peer) {
     const pool = this.parent;
     // Expecting HS from inbound peer first
     if (!peer.outbound) {
-      // this.expectHandshake();
+      this.expectHandshake(peer);
     }
 
     peer.on('packet-handshake', (p: HandshakePacket) => this.parent.emit('packet-handshake', p));
@@ -70,13 +74,25 @@ class PeerHandshakePacketHandler implements PeerPacketHandler {
   private handshaked = false;
   private handshakeTimeout: Timer;
 
-  constructor(private parent: Peer, private ctx) {
+  constructor(private parent: Peer, private ctx: Context) {
     this.handshakeTimeout = new Timer(5 * 1000);
+
+    // Linking peer with module's PeerPacketHandler
+    ctx[ppphSymbol].set(parent, this);
+
     parent.on('destroy', () => this.handshakeTimeout.clear());
   }
 
-  static create(parent: Peer, ctx) {
+  static create(parent: Peer, ctx: Context) {
     return (new this(parent, ctx));
+  }
+
+  expectHandshake() {
+    const parent = this.parent;
+    this.handshakeTimeout.start(() => {
+      parent.logger.warn(`${parent.outbound ? 'Outbound' : 'Inbound'} peer did not handshaked`);
+      parent.destroy();
+    });
   }
 
   handlePacket(packet: HandshakePacket): boolean {
