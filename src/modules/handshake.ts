@@ -47,7 +47,7 @@ class PoolHandshakePacketHandler implements PoolPacketHandler {
       this.expectHandshake(peer);
     }
 
-    peer.on('packet-handshake', (p: HandshakePacket) => this.parent.emit('packet-handshake', p));
+    peer.on('packet-handshake', (p: HandshakePacket) => pool.emit('packet-handshake', p));
 
     // Outbound peer connected
     peer.once('connect', () => {
