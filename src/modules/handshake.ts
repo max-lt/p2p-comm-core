@@ -1,15 +1,16 @@
 import { Module, Peer, Pool } from '@p2p-comm/base';
+import { PoolPacketHandler, PeerPacketHandler } from '@p2p-comm/base';
 import { types } from '../packets/types';
 import { HandshakePacket } from '../packets';
 
 import { Timer } from '@p2p-comm/base/src/util/timer';
 
-class PoolHandshakePacketHandler {
+class PoolHandshakePacketHandler implements PoolPacketHandler {
 
-  constructor(private parent: Pool) { }
+  constructor(private parent: Pool, private ctx) { }
 
-  static create(parent: Pool) {
-    return (new this(parent));
+  static create(parent: Pool, ctx) {
+    return (new this(parent, ctx));
   }
 
   private handshake(peer) {
@@ -22,6 +23,17 @@ class PoolHandshakePacketHandler {
       // this.expectHandshake();
 
     }
+  }
+
+  expectHandshake() {
+    /*
+    const parent = this.parent;
+    const peerCtx = this.ctx[this.parent];
+    this.handshakeTimeout.start(() => {
+      parent.logger.warn(`${parent.outbound ? 'Outbound' : 'Inbound'} peer did not handshaked`);
+      parent.destroy();
+    });
+    */
   }
 
   bindPeer(peer: Peer) {
@@ -39,8 +51,8 @@ class PoolHandshakePacketHandler {
       this.handshake(peer);
     });
 
-    peer.once('packet-handshake', (outbound) => {
-      pool.logger.debug(`Pool received handshake from ${outbound ? 'outbound' : 'inbound'} peer ${peer.port}`);
+    peer.once('packet-handshake', (p: HandshakePacket) => {
+      pool.logger.debug(`Pool received handshake from ${peer.outbound ? 'outbound' : 'inbound'} peer ${peer.port}`);
       pool.logger.debug(`Peer ${peer.port} will now be known as ${peer.id}`);
       pool.emit('peer', peer);
 
@@ -53,26 +65,18 @@ class PoolHandshakePacketHandler {
   }
 }
 
-class PeerHandshakePacketHandler {
+class PeerHandshakePacketHandler implements PeerPacketHandler {
 
   private handshaked = false;
   private handshakeTimeout: Timer;
 
-  constructor(private parent: Peer) {
+  constructor(private parent: Peer, private ctx) {
     this.handshakeTimeout = new Timer(5 * 1000);
     parent.on('destroy', () => this.handshakeTimeout.clear());
   }
 
-  static create(parent: Peer) {
-    return (new this(parent));
-  }
-
-  expectHandshake() {
-    const parent = this.parent;
-    this.handshakeTimeout.start(() => {
-      parent.logger.warn(`${parent.outbound ? 'Outbound' : 'Inbound'} peer did not handshaked`);
-      parent.destroy();
-    });
+  static create(parent: Peer, ctx) {
+    return (new this(parent, ctx));
   }
 
   handlePacket(packet: HandshakePacket): boolean {

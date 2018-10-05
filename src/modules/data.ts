@@ -1,9 +1,10 @@
 import { Module, Peer, Pool } from '@p2p-comm/base';
+import { PoolPacketHandler, PeerPacketHandler } from '@p2p-comm/base';
 import { DataPacket } from '../packets';
 import { types } from '../packets/types';
 
 
-class PoolDataPacketHandler {
+class PoolDataPacketHandler implements PoolPacketHandler {
   constructor(private parent: Pool) { }
 
   static create(parent: Pool) {
@@ -18,12 +19,12 @@ class PoolDataPacketHandler {
   }
 }
 
-class PeerDataPacketHandler {
+class PeerDataPacketHandler implements PeerPacketHandler {
 
-  constructor(private parent: Peer) { }
+  constructor(private parent: Peer, private ctx) { }
 
-  static create(parent: Peer) {
-    return (new this(parent));
+  static create(parent: Peer, ctx) {
+    return (new this(parent, ctx));
   }
 
   handlePacket(packet: DataPacket) {
@@ -34,7 +35,6 @@ class PeerDataPacketHandler {
     return false;
   }
 }
-
 
 const mod = Module.create({
   Peer: PeerDataPacketHandler,

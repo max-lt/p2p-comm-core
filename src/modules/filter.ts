@@ -1,8 +1,9 @@
 import { Module, Peer, Pool, AbstractPacket } from '@p2p-comm/base';
+import { PoolPacketHandler, PeerPacketHandler } from '@p2p-comm/base';
 
-class PoolFilter {
+class PoolFilter implements PoolPacketHandler {
 
-  constructor(private parent: Pool, ctx) {
+  constructor(private parent: Pool, private ctx) {
     ctx.filter = new Set();
   }
 
@@ -11,9 +12,16 @@ class PoolFilter {
   }
 
   bindPeer(peer: Peer) { }
+
+  beforeBroadcast(packet: AbstractPacket) {
+    this.parent.logger.debug('m >>', packet.getTypeName(), packet.packetId, this.ctx.filter.has(packet.packetId));
+    this.ctx.filter.add(packet.packetId);
+    return false;
+  }
+
 }
 
-class PeerFilter {
+class PeerFilter implements PeerPacketHandler {
 
   constructor(private parent: Peer, private ctx) { }
 
