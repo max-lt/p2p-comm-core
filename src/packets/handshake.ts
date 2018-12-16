@@ -1,6 +1,6 @@
-import { IBasePacketI, OBasePacketI, BasePacket, PacketMetaI, util} from '@p2p-comm/base';
+import { IBasePacketI, OBasePacketI, PacketMetaI, util} from '@p2p-comm/base';
 import { PacketTypesI, types } from './types';
-import { AbstractPacket } from '@p2p-comm/base/src/packets/abstract';
+import { AbstractPacket } from '@p2p-comm/base';
 
 export interface IHandshakePacket extends IBasePacketI {
   port: number;

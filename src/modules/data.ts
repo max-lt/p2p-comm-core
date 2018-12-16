@@ -36,10 +36,12 @@ class PeerDataPacketHandler implements PeerPacketHandler {
   }
 }
 
-const mod = Module.create({
-  Peer: PeerDataPacketHandler,
-  Pool: PoolDataPacketHandler,
-  packets: [DataPacket]
-});
-
-export default mod;
+export class DataModule extends Module {
+  constructor() {
+    super({
+      Peer: PeerDataPacketHandler,
+      Pool: PoolDataPacketHandler,
+      packets: [DataPacket]
+    });
+  }
+}

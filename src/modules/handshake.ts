@@ -4,6 +4,7 @@ import { types } from '../packets/types';
 import { HandshakePacket } from '../packets';
 
 import { Timer } from '@p2p-comm/base/src/util/timer';
+import { ModuleBuilder } from '@p2p-comm/base/src/module';
 
 const ppphSymbol = Symbol('Peer to PeerHandshakePacketHandler');
 
@@ -118,11 +119,12 @@ class PeerHandshakePacketHandler implements PeerPacketHandler {
   }
 }
 
-
-const mod = Module.create({
-  Peer: PeerHandshakePacketHandler,
-  Pool: PoolHandshakePacketHandler,
-  packets: [HandshakePacket]
-});
-
-export default mod;
+export class HandshakeModule extends Module {
+  constructor() {
+    super({
+      Peer: PeerHandshakePacketHandler,
+      Pool: PoolHandshakePacketHandler,
+      packets: [HandshakePacket]
+    });
+  }
+}

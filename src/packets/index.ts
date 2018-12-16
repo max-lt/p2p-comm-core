@@ -1,5 +1,3 @@
-import { DataPacket, IDataPacket } from './data';
-export { DataPacket, IDataPacket };
+export { DataPacket, IDataPacket } from './data';
 
-import { HandshakePacket, IHandshakePacket } from './handshake';
-export { HandshakePacket, IHandshakePacket };
+export { HandshakePacket, IHandshakePacket } from './handshake';

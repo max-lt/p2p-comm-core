@@ -49,11 +49,12 @@ class PeerFilter implements PeerPacketHandler {
   }
 }
 
-
-const mod = Module.create({
-  Peer: PeerFilter,
-  Pool: PoolFilter,
-  packets: []
-});
-
-export default mod;
+export class FilterModule extends Module {
+  constructor() {
+    super({
+      Peer: PeerFilter,
+      Pool: PoolFilter,
+      packets: []
+    });
+  }
+}

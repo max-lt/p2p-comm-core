@@ -1,7 +1,19 @@
-import { PacketTypesI, types } from './packets/types';
-export { PacketTypesI, types };
+export { PacketTypesI, types } from './packets/types';
+export { TCPServer, TCPTransport } from './transport/tcp';
 
-// import { HandshakePacket, DataPacket } from './packets';
+import { DataModule } from './modules/data';
+export { DataModule };
+import { FilterModule } from './modules/filter';
+export { FilterModule };
+import { HandshakeModule } from './modules/handshake';
+export { HandshakeModule };
 
-// export type Packet = HandshakePacket | DataPacket;
-// export type PacketTypes = typeof HandshakePacket | typeof DataPacket;
+export { DataPacket, IDataPacket } from './packets';
+export { HandshakePacket, IHandshakePacket } from './packets';
+
+import { CompoundModule } from '@p2p-comm/base';
+export class CoreModule extends CompoundModule {
+  constructor() {
+    super([new HandshakeModule, new FilterModule, new DataModule]);
+  }
+}

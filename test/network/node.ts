@@ -5,14 +5,14 @@ import * as Debug from 'debug';
 const debug = Debug('p2p-comm:test:node');
 
 import { TCPTransport, TCPServer } from '../../src/transport/tcp';
-import { BaseNode, BasePool, mergeModules } from '@p2p-comm/base';
+import { BaseNode, BasePool, CompoundModule } from '@p2p-comm/base';
 import { DataPacket, HandshakePacket } from '../../src/packets';
 import { defer } from '../util';
 
-import handshakeModule from '../../src/modules/handshake';
-import dataModule from '../../src/modules/data';
+import { HandshakeModule } from '../../src/modules/handshake';
+import { DataModule } from '../../src/modules/data';
 
-const mod = mergeModules([handshakeModule, dataModule]);
+const mod = new CompoundModule([new HandshakeModule, new DataModule]);
 
 class P2PNode extends BaseNode<TCPTransport> {
   constructor({ seed }) {
