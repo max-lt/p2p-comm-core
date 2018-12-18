@@ -3,35 +3,30 @@ import { PoolPacketHandler, PeerPacketHandler } from '@p2p-comm/base';
 import { types } from '../packets/types';
 import { HandshakePacket } from '../packets';
 
-import { Timer } from '@p2p-comm/base/src/util/timer';
-import { ModuleBuilder } from '@p2p-comm/base/src/module';
-
-const ppphSymbol = Symbol('Peer to PeerHandshakePacketHandler');
+import { TimerUtil as Timer } from '@p2p-comm/base';
 
 interface Context extends Object {
-  [ppphSymbol]: WeakMap<Peer, PeerHandshakePacketHandler>;
+  PPPHMAP: WeakMap<Peer, PeerHandshakePacketHandler>;
 }
 
 class PoolHandshakePacketHandler implements PoolPacketHandler {
 
-  constructor(private parent: Pool, private ctx: Context) {
-
-    const ppphMap = new WeakMap;
-    ctx[ppphSymbol] = ppphMap;
+  constructor(private pool: Pool, private ctx: Context) {
+    ctx.PPPHMAP = new WeakMap;
   }
 
-  static create(parent: Pool, ctx: Context) {
-    return (new this(parent, ctx));
+  static create(pool: Pool, ctx: Context) {
+    return (new this(pool, ctx));
   }
 
   expectHandshake(peer: Peer) {
     peer.logger.log(`starting handshake timeout`);
-    const peerHandler = this.ctx[ppphSymbol].get(peer);
+    const peerHandler = this.ctx.PPPHMAP.get(peer);
     peerHandler.expectHandshake();
   }
 
   private handshake(peer) {
-    const pool = this.parent;
+    const pool = this.pool;
     peer.logger.log(`handshaking: ${pool.port} -> ${peer.port}`);
     peer.send(HandshakePacket.fromObject({ port: pool.port, peerId: pool.nodeId }));
 
@@ -42,7 +37,7 @@ class PoolHandshakePacketHandler implements PoolPacketHandler {
   }
 
   bindPeer(peer: Peer) {
-    const pool = this.parent;
+    const pool = this.pool;
     // Expecting HS from inbound peer first
     if (!peer.outbound) {
       this.expectHandshake(peer);
@@ -75,40 +70,40 @@ class PeerHandshakePacketHandler implements PeerPacketHandler {
   private handshaked = false;
   private handshakeTimeout: Timer;
 
-  constructor(private parent: Peer, private ctx: Context) {
+  constructor(private peer: Peer, private ctx: Context) {
     this.handshakeTimeout = new Timer(5 * 1000);
 
     // Linking peer with module's PeerPacketHandler
-    ctx[ppphSymbol].set(parent, this);
+    ctx.PPPHMAP.set(peer, this);
 
-    parent.on('destroy', () => this.handshakeTimeout.clear());
+    peer.on('destroy', () => this.handshakeTimeout.clear());
   }
 
-  static create(parent: Peer, ctx: Context) {
-    return (new this(parent, ctx));
+  static create(peer: Peer, ctx: Context) {
+    return (new this(peer, ctx));
   }
 
   expectHandshake() {
-    const parent = this.parent;
+    const peer = this.peer;
     this.handshakeTimeout.start(() => {
-      parent.logger.warn(`${parent.outbound ? 'Outbound' : 'Inbound'} peer did not handshaked`);
-      parent.destroy();
+      peer.logger.warn(`${peer.outbound ? 'Outbound' : 'Inbound'} peer did not handshaked`);
+      peer.destroy();
     });
   }
 
   handlePacket(packet: HandshakePacket): boolean {
-    const parent = this.parent;
+    const peer = this.peer;
     switch (packet.type) {
       case types.HANDSHAKE:
-        if (parent.outbound && packet.port !== parent.port) {
-          parent.error(`Outbound peer gave a different port: expected ${parent.port} got ${packet.port}`);
+        if (peer.outbound && packet.port !== peer.port) {
+          peer.error(`Outbound peer gave a different port: expected ${peer.port} got ${packet.port}`);
         }
-        parent.id = packet.peerId;
-        parent.host = packet.host;
-        parent.port = packet.port;
+        peer.id = packet.peerId;
+        peer.host = packet.host;
+        peer.port = packet.port;
         this.handshaked = true;
         this.handshakeTimeout.clear();
-        parent.emit('packet-handshake', packet);
+        peer.emit('packet-handshake', packet);
         return true;
       default:
         if (!this.handshaked) {

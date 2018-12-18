@@ -1,6 +1,6 @@
 import { IBasePacketI, OBasePacketI, PacketMetaI, util} from '@p2p-comm/base';
 import { PacketTypesI, types } from './types';
-import { AbstractPacket } from '@p2p-comm/base';
+import { BasePacket } from '@p2p-comm/base';
 
 export interface IHandshakePacket extends IBasePacketI {
   port: number;
@@ -13,8 +13,7 @@ export interface OHandshakePacket extends OBasePacketI {
   host: string;
   peerId: string;
 }
-export class HandshakePacket extends AbstractPacket implements OHandshakePacket {
-
+export class HandshakePacket extends BasePacket<IHandshakePacket, OHandshakePacket> implements OHandshakePacket {
   static type = types.HANDSHAKE;
   public type = types.HANDSHAKE;
   public port: number;

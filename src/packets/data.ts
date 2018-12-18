@@ -1,7 +1,6 @@
 import { IBasePacketI, OBasePacketI, PacketMetaI, util } from '@p2p-comm/base';
 import { PacketTypesI, types } from './types';
-import { AbstractPacket } from '@p2p-comm/base';
-
+import { BasePacket } from '@p2p-comm/base';
 
 export interface IDataPacket extends IBasePacketI {
   data: Buffer;
@@ -10,7 +9,7 @@ export interface ODataPacket extends OBasePacketI {
   type: PacketTypesI['DATA'];
   data: Buffer;
 }
-export class DataPacket extends AbstractPacket implements ODataPacket {
+export class DataPacket extends BasePacket<IDataPacket, ODataPacket> implements ODataPacket {
 
   static type = types.DATA;
   public type = types.DATA;
