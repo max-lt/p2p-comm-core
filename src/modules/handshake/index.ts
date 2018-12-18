@@ -1,7 +1,6 @@
 import { Module, Peer, Pool } from '@p2p-comm/base';
 import { PoolPacketHandler, PeerPacketHandler } from '@p2p-comm/base';
-import { types } from '../packets/types';
-import { HandshakePacket } from '../packets';
+import { HandshakePacket, types } from './packets';
 
 import { TimerUtil as Timer } from '@p2p-comm/base';
 

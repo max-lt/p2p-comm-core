@@ -1,7 +1,7 @@
 import { Module, Peer, Pool } from '@p2p-comm/base';
 import { PoolPacketHandler, PeerPacketHandler } from '@p2p-comm/base';
-import { DataPacket } from '../packets';
-import { types } from '../packets/types';
+import { DataPacket } from './packets';
+import { types } from './packets';
 
 class PoolDataPacketHandler implements PoolPacketHandler {
   constructor(private pool: Pool) { }

@@ -6,7 +6,8 @@ const debug = Debug('p2p-comm:test:node');
 
 import { TCPTransport, TCPServer } from '../../src/transport/tcp';
 import { BaseNode, BasePool, CompoundModule } from '@p2p-comm/base';
-import { DataPacket, HandshakePacket } from '../../src/packets';
+import { DataPacket } from '../../src/modules/data/packets';
+import { HandshakePacket } from '../../src/modules/handshake/packets';
 import { defer } from '../util';
 
 import { HandshakeModule } from '../../src/modules/handshake';

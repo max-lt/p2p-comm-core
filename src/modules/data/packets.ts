@@ -1,6 +1,13 @@
 import { IBasePacketI, OBasePacketI, PacketMetaI, util } from '@p2p-comm/base';
-import { PacketTypesI, types } from './types';
 import { BasePacket } from '@p2p-comm/base';
+
+export interface PacketTypesI {
+  DATA: 0x81;
+}
+
+export const types: PacketTypesI = {
+  DATA: 0x81
+};
 
 export interface IDataPacket extends IBasePacketI {
   data: Buffer;

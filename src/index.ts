@@ -1,4 +1,3 @@
-export { PacketTypesI, types } from './packets/types';
 export { TCPServer, TCPTransport } from './transport/tcp';
 
 import { DataModule } from './modules/data';
@@ -8,8 +7,8 @@ export { FilterModule };
 import { HandshakeModule } from './modules/handshake';
 export { HandshakeModule };
 
-export { DataPacket, IDataPacket } from './packets';
-export { HandshakePacket, IHandshakePacket } from './packets';
+export { DataPacket, IDataPacket } from './modules/data/packets';
+export { HandshakePacket, IHandshakePacket } from './modules/handshake/packets';
 
 import { CompoundModule } from '@p2p-comm/base';
 export class CoreModule extends CompoundModule {

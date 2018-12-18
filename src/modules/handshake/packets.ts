@@ -1,6 +1,13 @@
 import { IBasePacketI, OBasePacketI, PacketMetaI, util} from '@p2p-comm/base';
-import { PacketTypesI, types } from './types';
 import { BasePacket } from '@p2p-comm/base';
+
+export interface PacketTypesI {
+  HANDSHAKE: 0x82;
+}
+
+export const types: PacketTypesI = {
+  HANDSHAKE: 0x82
+};
 
 export interface IHandshakePacket extends IBasePacketI {
   port: number;
