@@ -25,7 +25,7 @@
   },
   "license": "ISC",
   "dependencies": {
-    "@p2p-comm/base": "^1.1.0",
+    "@p2p-comm/base": "^1.1.1",
     "debug": "^4.0.1",
     "uuid": "^3.3.2"
   },
